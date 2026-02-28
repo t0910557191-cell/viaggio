@@ -671,7 +671,8 @@ function FXPanel({T}) {
   // Store rates as a matrix: rates[A][B] = how many B per 1 A
   // We derive this from BASE_FX: rate(A->B) = BASE_FX[A] / BASE_FX[B]
   // User can override any pair directly
-  const [overrides, setOverrides] = useState({});  // { 'CNY ¥->EUR €': 0.128, ... }
+  const [overrides, setOverrides] = useState({});
+  const [baseCurr, setBaseCurr] = useState('USD $');  // { 'CNY ¥->EUR €': 0.128, ... }
   const [fc, setFc] = useState('CNY ¥');
   const [tc, setTc] = useState('EUR €');
   const [amt, setAmt] = useState('100');
@@ -702,13 +703,7 @@ function FXPanel({T}) {
 
   const result = (parseFloat(amt)||0) * getRate(fc, tc);
 
-  // Build rate preview table
-  const pairs = [];
-  for (let i = 0; i < CURR.length; i++) {
-    for (let j = i+1; j < CURR.length; j++) {
-      pairs.push([CURR[i], CURR[j]]);
-    }
-  }
+
 
   return (
     <div>
@@ -770,24 +765,33 @@ function FXPanel({T}) {
         </div>
       </div>
 
-      {/* Rate table */}
+      {/* Rate table — base currency selector */}
       <div style={{marginBottom:10}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
           <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>{T.allRates}</div>
-          {Object.keys(overrides).length > 0 && (
-            <button style={{...S.gh, fontSize:11, padding:'5px 9px'}} onClick={resetAll}>{T.resetFx}</button>
-          )}
+          <div style={{display:'flex', gap:6, alignItems:'center'}}>
+            {Object.keys(overrides).length > 0 && (
+              <button style={{...S.gh, fontSize:11, padding:'5px 9px'}} onClick={resetAll}>{T.resetFx}</button>
+            )}
+          </div>
         </div>
-        {pairs.map(([a,b]) => {
-          const key = a+'->'+b;
-          const rkey = b+'->'+a;
+        <div style={{display:'flex', gap:5, flexWrap:'wrap', marginBottom:12}}>
+          {CURR.map(c => (
+            <button key={c} onClick={() => setBaseCurr(c)} style={{...CZ, fontSize:12, letterSpacing:1, cursor:'pointer', padding:'5px 11px', borderRadius:2, border:'1px solid '+(baseCurr===c?G.gold:'#3a3020'), background:baseCurr===c?G.gold+'18':'transparent', color:baseCurr===c?G.gold:G.sub}}>
+              {sym(c)}
+            </button>
+          ))}
+        </div>
+        {CURR.filter(c => c !== baseCurr).map(b => {
+          const key = baseCurr+'->'+b;
+          const rkey = b+'->'+baseCurr;
           const isCustom = overrides[key] !== undefined || overrides[rkey] !== undefined;
           return (
-            <div key={key} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 10px', borderBottom:'1px solid '+G.br2, fontSize:13}}>
-              <span style={{color:G.sub}}>{sym(a)} → {sym(b)}</span>
-              <span style={{color:isCustom?G.gold:G.sub, fontSize:12}}>
-                {isCustom && <span style={{fontSize:9, marginRight:4}}>●</span>}
-                1 {sym(a)} = {sym(b)}{getRate(a,b).toFixed(4)}
+            <div key={b} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', borderBottom:'1px solid '+G.br2, fontSize:14}}>
+              <span style={{color:G.sub}}>1 {sym(baseCurr)}</span>
+              <span style={{color:isCustom?G.gold:G.text}}>
+                {isCustom && <span style={{fontSize:9, color:G.gold, marginRight:4}}>●</span>}
+                {sym(b)}{getRate(baseCurr,b).toFixed(4)}
               </span>
             </div>
           );
