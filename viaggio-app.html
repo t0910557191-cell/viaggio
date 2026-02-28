@@ -76,6 +76,12 @@ const TR = {
     defCurrency:'預設幣別', defLang:'預設語言',
     themeNote:'更多設定功能開發中',
     tripName:'旅程名稱（選填）',
+    guideTotal:'份攻略',
+    guideFilled:'已填寫',
+    photoClick:'點擊選擇照片',
+    statusLabels:['未讀', '已讀', '已去過 ✓'],
+    expCatLabels:['住宿', '餐飲', '交通', '景點門票', '購物', '其他'],
+    guideCatLabels:['餐廳', '咖啡廳', '博物館/展覽', '住宿', '景點/打卡', '交通', '購物', '綜合', '其他'],
     appInfo1:'資料（含照片）自動存於瀏覽器，清除 cookies 才會消失',
     appInfo2:'花費與日記可匯出 CSV',
     appInfo3:'交通功能串接 Google Maps（免費）',
@@ -119,6 +125,12 @@ const TR = {
     defCurrency:'默认币别', defLang:'默认语言',
     themeNote:'更多设置功能开发中',
     tripName:'旅程名称（选填）',
+    guideTotal:'份攻略',
+    guideFilled:'已填写',
+    photoClick:'点击选择照片',
+    statusLabels:['未读', '已读', '已去过 ✓'],
+    expCatLabels:['住宿', '餐饮', '交通', '景点门票', '购物', '其他'],
+    guideCatLabels:['餐厅', '咖啡厅', '博物馆/展览', '住宿', '景点/打卡', '交通', '购物', '综合', '其他'],
     appInfo1:'数据（含照片）自动存于浏览器，清除 cookies 才会消失',
     appInfo2:'花费与日记可导出 CSV',
     appInfo3:'交通功能连接 Google Maps（免费）',
@@ -162,6 +174,12 @@ const TR = {
     defCurrency:'Default Currency', defLang:'Default Language',
     themeNote:'More settings coming soon',
     tripName:'Trip Name (optional)',
+    guideTotal:'guides',
+    guideFilled:'filled',
+    photoClick:'Tap to select photos',
+    statusLabels:['Unread', 'Read', 'Been there ✓'],
+    expCatLabels:['Accommodation', 'Food & Drink', 'Transport', 'Attractions', 'Shopping', 'Other'],
+    guideCatLabels:['Restaurant', 'Café', 'Museum/Exhibition', 'Accommodation', 'Attractions', 'Transport', 'Shopping', 'General', 'Other'],
     appInfo1:'Data (incl. photos) saved in browser — cleared only if you clear cookies',
     appInfo2:'Expenses & diary can be exported as CSV',
     appInfo3:'Transport uses Google Maps (free)',
@@ -169,7 +187,7 @@ const TR = {
     clearConfirm:'Are you sure you want to clear all data? This cannot be undone.',
   },
   'IT': {
-    tabs:['Trasporti','Guida','Diario','Spese','Statistiche','Impostazioni'],
+    tabs:['Trasporti','Guida','Diario','Spese','Stat.','Impost.'],
     from:'Partenza', to:'Destinazione', openMaps:'Apri Google Maps',
     saveLog:'Salva Viaggio', tripLog:'Registro', estTime:'Tempo stimato',
     cost:'Costo', note:'Nota', del:'Elm', edit:'Mod', save:'Salva', cancel:'Annulla',
@@ -205,6 +223,12 @@ const TR = {
     defCurrency:'Valuta predefinita', defLang:'Lingua predefinita',
     themeNote:'Altre impostazioni in arrivo',
     tripName:'Nome viaggio (opzionale)',
+    guideTotal:'guide',
+    guideFilled:'compilate',
+    photoClick:'Tocca per scegliere foto',
+    statusLabels:['Da leggere', 'Letto', 'Ci sono stato ✓'],
+    expCatLabels:['Alloggio', 'Cibo & Bevande', 'Trasporti', 'Attrazioni', 'Shopping', 'Altro'],
+    guideCatLabels:['Ristorante', 'Caffè', 'Museo/Mostra', 'Alloggio', 'Attrazioni', 'Trasporti', 'Shopping', 'Generale', 'Altro'],
     appInfo1:'Dati (foto incluse) salvati nel browser — si cancellano solo svuotando i cookie',
     appInfo2:'Spese e diario esportabili in CSV',
     appInfo3:'Trasporti collegati a Google Maps (gratuito)',
@@ -286,7 +310,7 @@ function Modal({show, onClose, title, children}) {
 }
 
 // ── PHOTOS ──
-function Photos({photos, set}) {
+function Photos({photos, set, T}) {
   const ref = useRef();
   const add = async e => {
     const r = await Promise.all(Array.from(e.target.files).map(readImg));
@@ -471,7 +495,7 @@ function GuideTab({T}) {
     <div style={{padding:18}}>
       <div style={{display:'flex', gap:8, marginBottom:14, alignItems:'center'}}>
         <div style={{fontSize:13, color:G.dim, padding:'6px 12px', background:G.bg4, border:'1px solid '+G.br, borderRadius:3}}>
-          共 <span style={{color:G.gold}}>{total}</span> 份攻略 · 已填寫 <span style={{color:G.green}}>{srcs.filter(hasContent).length}</span>
+          <span style={{color:G.gold}}>{total}</span> {T.guideTotal} · {T.guideFilled} <span style={{color:G.green}}>{srcs.filter(hasContent).length}</span>
         </div>
         <button style={{...S.gold, padding:'7px 14px', fontSize:11, marginLeft:'auto'}} onClick={openNew}>{T.addSrc}</button>
       </div>
@@ -480,11 +504,11 @@ function GuideTab({T}) {
         <input style={{...S.inp, fontSize:12, flex:1, minWidth:80}} placeholder={T.filterCity} value={cityF} onChange={e=>setCityF(e.target.value)}/>
         <select style={{...S.inp, fontSize:12, appearance:'none', width:'auto', minWidth:90}} value={catF} onChange={e=>setCatF(e.target.value)}>
           <option value="">{T.allCats}</option>
-          {GUIDE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+          {GUIDE_CATS.map((c,i) => <option key={c} value={c}>{T.guideCatLabels ? T.guideCatLabels[i] : c}</option>)}
         </select>
         <select style={{...S.inp, fontSize:12, appearance:'none', width:'auto', minWidth:80}} value={stF} onChange={e=>setStF(e.target.value)}>
           <option value="">{T.allStatus}</option>
-          {STATUS.map(s => <option key={s} value={s}>{s}</option>)}
+          {STATUS.map((s,i) => <option key={s} value={s}>{T.statusLabels ? T.statusLabels[i] : s}</option>)}
         </select>
       </div>
 
@@ -508,8 +532,8 @@ function GuideTab({T}) {
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{display:'flex', alignItems:'center', gap:5, marginBottom:5, flexWrap:'wrap'}}>
                       {s.srcType && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(SRC_CLR[s.srcType]||G.dim)+'25', color:SRC_CLR[s.srcType]||G.sub, border:'1px solid '+(SRC_CLR[s.srcType]||G.br)+'44'}}>{s.srcType}</span>}
-                      {s.cat && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(GUIDE_CLR[s.cat]||G.dim)+'20', color:GUIDE_CLR[s.cat]||G.sub, border:'1px solid '+(GUIDE_CLR[s.cat]||G.br)+'44'}}>{s.cat}</span>}
-                      <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, color:SCLR[s.status]||G.dim, border:'1px solid '+(SCLR[s.status]||G.br)+'55'}}>{s.status}</span>
+                      {s.cat && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(GUIDE_CLR[s.cat]||G.dim)+'20', color:GUIDE_CLR[s.cat]||G.sub, border:'1px solid '+(GUIDE_CLR[s.cat]||G.br)+'44'}}>{T.guideCatLabels ? T.guideCatLabels[GUIDE_CATS.indexOf(s.cat)] : s.cat}</span>}
+                      <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, color:SCLR[s.status]||G.dim, border:'1px solid '+(SCLR[s.status]||G.br)+'55'}}>{T.statusLabels ? T.statusLabels[STATUS.indexOf(s.status)] : s.status}</span>
                       {s.trust>0 && <span style={{fontSize:12, color:G.gold}}>{'★'.repeat(s.trust)}</span>}
                     </div>
                     <div style={{fontSize:15, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.title||'（未命名）'}</div>
@@ -531,8 +555,8 @@ function GuideTab({T}) {
                   <div style={{marginBottom:14}}>
                     <Lbl t={T.status}/>
                     <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-                      {STATUS.map(st => (
-                        <button key={st} onClick={() => setField(s.id,'status',st)} style={chip(s.status===st, SCLR[st])}>{st}</button>
+                      {STATUS.map((st,i) => (
+                        <button key={st} onClick={() => setField(s.id,'status',st)} style={chip(s.status===st, SCLR[st])}>{T.statusLabels ? T.statusLabels[i] : st}</button>
                       ))}
                     </div>
                   </div>
@@ -600,8 +624,8 @@ function GuideTab({T}) {
           <div>
             <Lbl t={T.category}/>
             <select style={{...S.inp, appearance:'none'}} value={form.cat} onChange={e=>setForm(p=>({...p,cat:e.target.value}))}>
-              <option value="">選擇</option>
-              {GUIDE_CATS.map(c => <option key={c} value={c}>{c}</option>)}
+              <option value="">{T.allCats}</option>
+              {GUIDE_CATS.map((c,i) => <option key={c} value={c}>{T.guideCatLabels ? T.guideCatLabels[i] : c}</option>)}
             </select>
           </div>
         </div>
@@ -616,7 +640,7 @@ function GuideTab({T}) {
         <div style={{marginBottom:14}}>
           <Lbl t={T.status}/>
           <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-            {STATUS.map(st => <button key={st} onClick={() => setForm(p=>({...p,status:st}))} style={chip(form.status===st, SCLR[st])}>{st}</button>)}
+            {STATUS.map((st,i) => <button key={st} onClick={() => setForm(p=>({...p,status:st}))} style={chip(form.status===st, SCLR[st])}>{T.statusLabels ? T.statusLabels[i] : st}</button>)}
           </div>
         </div>
         <div style={{display:'flex', gap:10}}>
@@ -918,7 +942,7 @@ function App() {
     return (parseFloat(e.amount)||0) * r;
   };
   const total = exps.reduce((a,e) => a + cv(e, null), 0);
-  const byM = exps.reduce((a,e) => { const m=e.date&&e.date.slice(0,7)||'?'; a[m]=(a[m]||0)+cv(e,null); return a; }, {});
+  const byM = exps.reduce((a,e) => { const m=e.date&&e.date.slice(0,7).replace('-','/')||'?'; a[m]=(a[m]||0)+cv(e,null); return a; }, {});
   const byC = exps.reduce((a,e) => { a[e.city]=(a[e.city]||0)+cv(e,null); return a; }, {});
   const mL = Object.keys(byM).sort();
   const cL = Object.keys(byC).sort((a,b)=>byC[b]-byC[a]);
@@ -1034,7 +1058,7 @@ function App() {
                   <div key={c.id} style={{...S.card, display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                     <div style={{flex:1}}>
                       <div style={{fontSize:15, fontWeight:500, marginBottom:3}}>{c.from} → {c.to}</div>
-                      <div style={{fontSize:12, color:G.dim, marginBottom:4}}>{c.date}</div>
+                      <div style={{fontSize:12, color:G.dim, marginBottom:4}}>{c.date&&c.date.replace(/-/g,'/')}</div>
                       <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
                         {c.estTime && <div><span style={{fontSize:11, color:G.dim}}>{T.estTime} </span><span style={{fontSize:12}}>{c.estTime}</span></div>}
                         {c.cost>0 && <div><span style={{fontSize:11, color:G.dim}}>{T.cost} </span><span style={{fontSize:12, color:G.gold}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
@@ -1082,7 +1106,7 @@ function App() {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6}}>
                   <div>
                     <div style={{fontSize:16, fontWeight:500}}>{e.city}</div>
-                    <div style={{fontSize:12, color:G.dim}}>{e.country} · {e.date}</div>
+                    <div style={{fontSize:12, color:G.dim}}>{e.country} · {e.date&&e.date.replace(/-/g,'/')}</div>
                   </div>
                   <div style={{display:'flex', gap:5, alignItems:'center'}}>
                     <Stars v={e.rating}/>
@@ -1117,10 +1141,10 @@ function App() {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div style={{flex:1}}>
                     <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap'}}>
-                      {e.category && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(EXP_CLR[e.category]||G.dim)+'20', color:EXP_CLR[e.category]||G.sub, border:'1px solid '+(EXP_CLR[e.category]||G.br)+'33'}}>{e.category}</span>}
+                      {e.category && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(EXP_CLR[e.category]||G.dim)+'20', color:EXP_CLR[e.category]||G.sub, border:'1px solid '+(EXP_CLR[e.category]||G.br)+'33'}}>{T.expCatLabels ? T.expCatLabels[EXP_CATS.indexOf(e.category)] : e.category}</span>}
                       {e.shop && <span style={{fontSize:14, fontWeight:500}}>{e.shop}</span>}
                     </div>
-                    <div style={{fontSize:12, color:G.dim, marginBottom:3}}>{e.city} · {e.date}</div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:3}}>{e.city} · {e.date&&e.date.replace(/-/g,'/')}</div>
                     {e.note && <div style={{fontSize:12, color:G.sub, fontStyle:'italic'}}>{e.note}</div>}
                   </div>
                   <div style={{textAlign:'right', marginLeft:12}}>
@@ -1200,7 +1224,7 @@ function App() {
                 {commutes.map(c => (
                   <div key={c.id} style={S.card}>
                     <div style={{fontSize:15, fontWeight:500, marginBottom:3}}>{c.from} → {c.to}</div>
-                    <div style={{fontSize:12, color:G.dim, marginBottom:5}}>{c.date}</div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:5}}>{c.date&&c.date.replace(/-/g,'/')}</div>
                     <div style={{display:'flex', gap:14, flexWrap:'wrap'}}>
                       {c.estTime && <div><span style={{fontSize:11, color:G.dim}}>{T.estTime} </span><span style={{fontSize:13, color:G.gold}}>{c.estTime}</span></div>}
                       {c.cost>0 && <div><span style={{fontSize:11, color:G.dim}}>{T.cost} </span><span style={{fontSize:13, color:G.green}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
@@ -1248,7 +1272,7 @@ function App() {
       </Modal>
 
       <Modal show={showDF} onClose={() => {setShowDF(false); setEditDId(null);}} title={editDId ? T.edit+' 日記' : T.addDiary}>
-        <Photos photos={dPh} set={setDPh}/>
+        <Photos photos={dPh} set={setDPh} T={T}/>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
           <div><Lbl t={T.city + ' *'}/><input style={{...S.inp, borderColor: dF.city?G.br:'rgba(212,168,83,.4)'}} placeholder="北京, Roma..." value={dF.city} onChange={e=>setDF(p=>({...p,city:e.target.value}))}/></div>
           <div><Lbl t={T.country}/><input style={S.inp} placeholder="中国, Italia..." value={dF.country} onChange={e=>setDF(p=>({...p,country:e.target.value}))}/></div>
@@ -1269,14 +1293,14 @@ function App() {
       </Modal>
 
       <Modal show={showEF} onClose={() => {setShowEF(false); setEditEId(null);}} title={editEId ? T.edit+' 花費' : T.addExp}>
-        <Photos photos={ePh} set={setEPh}/>
+        <Photos photos={ePh} set={setEPh} T={T}/>
         <div style={{marginBottom:10}}><Lbl t={T.date}/><input style={S.inp} type="date" value={eF.date} onChange={e=>setEF(p=>({...p,date:e.target.value}))}/></div>
         <div style={{marginBottom:10}}><Lbl t={T.city}/><input style={S.inp} placeholder="Roma, 北京..." value={eF.city} onChange={e=>setEF(p=>({...p,city:e.target.value}))}/></div>
         <div style={{marginBottom:10}}><Lbl t={T.shop}/><input style={S.inp} placeholder="餐廳名、景點、飯店..." value={eF.shop} onChange={e=>setEF(p=>({...p,shop:e.target.value}))}/></div>
         <div style={{marginBottom:10}}>
           <Lbl t={T.category}/>
           <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
-            {EXP_CATS.map(c => <button key={c} onClick={() => setEF(p=>({...p,category:c}))} style={chip(eF.category===c, EXP_CLR[c])}>{c}</button>)}
+            {EXP_CATS.map((c,i) => <button key={c} onClick={() => setEF(p=>({...p,category:c}))} style={chip(eF.category===c, EXP_CLR[c])}>{T.expCatLabels ? T.expCatLabels[i] : c}</button>)}
           </div>
         </div>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
