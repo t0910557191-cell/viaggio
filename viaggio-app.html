@@ -22,9 +22,9 @@ select option{background:#1a1710;color:#e8dcc8}
 const {useState, useRef, useEffect} = React;
 
 // ── CONSTANTS ──
-const CURR = ['CNY ¥','EUR €','USD $','TWD NT$'];
+const CURR = ['CNY ¥','EUR €','USD $','TWD NT$','CAD C$'];
 // Base rates to USD (used as fallback, user can override any pair)
-const BASE_FX = {'CNY ¥':0.138,'EUR €':1.085,'USD $':1,'TWD NT$':0.031};
+const BASE_FX = {'CNY ¥':0.138,'EUR €':1.085,'USD $':1,'TWD NT$':0.031,'CAD C$':0.74};
 const SRC_TYPES = ['小紅書','部落格','YouTube','Google Maps','Tripadvisor','官方網站','IG','其他'];
 const SRC_CLR = {'小紅書':'#e05a5a','部落格':'#7a9b6a','YouTube':'#c0504d','Google Maps':'#6a9bc0','Tripadvisor':'#3a9b7a','官方網站':'#8b7355','IG':'#9b7a8a','其他':'#7a8a7a'};
 const GUIDE_CATS = ['餐廳','咖啡廳','博物館/展覽','住宿','景點/打卡','交通','購物','綜合','其他'];
@@ -1270,10 +1270,8 @@ function App() {
 
       <Modal show={showEF} onClose={() => {setShowEF(false); setEditEId(null);}} title={editEId ? T.edit+' 花費' : T.addExp}>
         <Photos photos={ePh} set={setEPh}/>
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
-          <div><Lbl t={T.date}/><input style={S.inp} type="date" value={eF.date} onChange={e=>setEF(p=>({...p,date:e.target.value}))}/></div>
-          <div><Lbl t={T.city}/><input style={S.inp} placeholder="城市" value={eF.city} onChange={e=>setEF(p=>({...p,city:e.target.value}))}/></div>
-        </div>
+        <div style={{marginBottom:10}}><Lbl t={T.date}/><input style={S.inp} type="date" value={eF.date} onChange={e=>setEF(p=>({...p,date:e.target.value}))}/></div>
+        <div style={{marginBottom:10}}><Lbl t={T.city}/><input style={S.inp} placeholder="Roma, 北京..." value={eF.city} onChange={e=>setEF(p=>({...p,city:e.target.value}))}/></div>
         <div style={{marginBottom:10}}><Lbl t={T.shop}/><input style={S.inp} placeholder="餐廳名、景點、飯店..." value={eF.shop} onChange={e=>setEF(p=>({...p,shop:e.target.value}))}/></div>
         <div style={{marginBottom:10}}>
           <Lbl t={T.category}/>
