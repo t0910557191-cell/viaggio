@@ -234,18 +234,18 @@ const S = {
   inp: {background:G.bg3, border:'1px solid '+G.br, color:G.text, padding:'10px 14px', fontFamily:"'Cormorant Garamond',serif", fontSize:15, borderRadius:2, width:'100%', outline:'none'},
   ta:  {background:G.bg3, border:'1px solid '+G.br, color:G.text, padding:'10px 14px', fontFamily:"'Cormorant Garamond',serif", fontSize:14, borderRadius:2, width:'100%', resize:'vertical', outline:'none'},
   gold:{background:G.gold, color:G.bg, border:'none', padding:'10px 18px', fontFamily:"'Cinzel',serif", letterSpacing:2, cursor:'pointer', borderRadius:2, fontSize:10},
-  out: {background:'transparent', color:G.gold, border:'1px solid '+G.gold, padding:'9px 14px', fontFamily:"'Cinzel',serif", letterSpacing:2, cursor:'pointer', borderRadius:2, fontSize:10},
-  gh:  {background:'transparent', color:G.dim, border:'1px solid '+G.br, padding:'7px 12px', fontFamily:"'Cinzel',serif", letterSpacing:1, cursor:'pointer', borderRadius:2, fontSize:10},
+  out: {background:'transparent', color:G.gold, border:'1px solid '+G.gold, padding:'9px 14px', fontFamily:"'Cinzel',serif", letterSpacing:2, cursor:'pointer', borderRadius:2, fontSize:12},
+  gh:  {background:'transparent', color:G.dim, border:'1px solid '+G.br, padding:'7px 12px', fontFamily:"'Cinzel',serif", letterSpacing:1, cursor:'pointer', borderRadius:2, fontSize:12},
   rd:  {background:'transparent', color:G.red, border:'1px solid rgba(155,106,106,.3)', padding:'6px 10px', fontFamily:"'Cinzel',serif", letterSpacing:1, cursor:'pointer', borderRadius:2, fontSize:10},
   card:{border:'1px solid '+G.br2, borderRadius:4, padding:14, marginBottom:10, background:G.bg},
 };
 const CZ = {fontFamily:"'Cinzel',serif"};
 const chip = (on, clr) => ({...CZ, fontSize:13, letterSpacing:1, cursor:'pointer', padding:'5px 11px', borderRadius:2, whiteSpace:'nowrap', border:'1px solid '+(on?(clr||G.gold):'#3a3020'), background:on?(clr||G.gold)+'18':'transparent', color:on?(clr||G.gold):G.sub});
-const Lbl = ({t}) => <div style={{fontSize:9, color:G.dim, letterSpacing:2, ...CZ, marginBottom:6}}>{t}</div>;
+const Lbl = ({t}) => <div style={{fontSize:12, color:G.dim, letterSpacing:1, ...CZ, marginBottom:6}}>{t}</div>;
 const HR = () => <span style={{flex:1, height:1, background:G.br, display:'block'}}/>;
 const SecHead = ({t, children}) => (
   <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:14}}>
-    <span style={{...CZ, fontSize:10, letterSpacing:3, color:G.dim}}>{t}</span><HR/>{children}
+    <span style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>{t}</span><HR/>{children}
   </div>
 );
 
@@ -352,7 +352,7 @@ function TmplField({label, value, onChange, multiline, placeholder}) {
       <div style={{marginBottom:10}}>
         <Lbl t={label}/>
         <textarea
-          style={{...S.ta, minHeight:64, fontSize:13}}
+          style={{...S.ta, minHeight:64, fontSize:14}}
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder||''}
@@ -363,7 +363,7 @@ function TmplField({label, value, onChange, multiline, placeholder}) {
   return (
     <div style={{marginBottom:10}}>
       <Lbl t={label}/>
-      <input style={{...S.inp, fontSize:13}} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder||''}/>
+      <input style={{...S.inp, fontSize:14}} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder||''}/>
     </div>
   );
 }
@@ -374,9 +374,9 @@ function TmplSection({icon, title, children}) {
     <div style={{marginBottom:4}}>
       <button onClick={() => setOpen(o=>!o)} style={{width:'100%', background:'transparent', border:'none', cursor:'pointer', padding:'8px 0', display:'flex', alignItems:'center', gap:8}}>
         <span style={{fontSize:13}}>{icon}</span>
-        <span style={{...CZ, fontSize:9, letterSpacing:2, color:G.dim}}>{title}</span>
+        <span style={{...CZ, fontSize:12, letterSpacing:1, color:G.dim}}>{title}</span>
         <HR/>
-        <span style={{color:G.dim, fontSize:10}}>{open?'▲':'▼'}</span>
+        <span style={{color:G.dim, fontSize:12}}>{open?'▲':'▼'}</span>
       </button>
       {open && <div style={{paddingLeft:4}}>{children}</div>}
     </div>
@@ -450,10 +450,10 @@ function GuideTab({T}) {
   return (
     <div style={{padding:18}}>
       <div style={{display:'flex', gap:8, marginBottom:14, alignItems:'center'}}>
-        <div style={{fontSize:11, color:G.dim, padding:'5px 10px', background:G.bg4, border:'1px solid '+G.br, borderRadius:3}}>
+        <div style={{fontSize:13, color:G.dim, padding:'6px 12px', background:G.bg4, border:'1px solid '+G.br, borderRadius:3}}>
           共 <span style={{color:G.gold}}>{total}</span> 份攻略 · 已填寫 <span style={{color:G.green}}>{srcs.filter(hasContent).length}</span>
         </div>
-        <button style={{...S.gold, padding:'6px 12px', fontSize:9, marginLeft:'auto'}} onClick={openNew}>{T.addSrc}</button>
+        <button style={{...S.gold, padding:'7px 14px', fontSize:11, marginLeft:'auto'}} onClick={openNew}>{T.addSrc}</button>
       </div>
 
       <div style={{display:'flex', gap:6, marginBottom:14, flexWrap:'wrap'}}>
@@ -474,7 +474,7 @@ function GuideTab({T}) {
 
       {cities.map(city => (
         <div key={city} style={{marginBottom:20}}>
-          <div style={{...CZ, fontSize:9, letterSpacing:3, color:G.gold, marginBottom:8, display:'flex', alignItems:'center', gap:8}}>
+          <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.gold, marginBottom:8, display:'flex', alignItems:'center', gap:8}}>
             <span>{city}</span><HR/>
             <span style={{color:G.dim, letterSpacing:1}}>{filtered.filter(s=>s.city===city).length}</span>
           </div>
@@ -487,20 +487,20 @@ function GuideTab({T}) {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8}}>
                   <div style={{flex:1, minWidth:0}}>
                     <div style={{display:'flex', alignItems:'center', gap:5, marginBottom:5, flexWrap:'wrap'}}>
-                      {s.srcType && <span style={{fontSize:10, padding:'2px 6px', borderRadius:2, background:(SRC_CLR[s.srcType]||G.dim)+'25', color:SRC_CLR[s.srcType]||G.sub, border:'1px solid '+(SRC_CLR[s.srcType]||G.br)+'44'}}>{s.srcType}</span>}
-                      {s.cat && <span style={{fontSize:10, padding:'2px 6px', borderRadius:2, background:(GUIDE_CLR[s.cat]||G.dim)+'20', color:GUIDE_CLR[s.cat]||G.sub, border:'1px solid '+(GUIDE_CLR[s.cat]||G.br)+'44'}}>{s.cat}</span>}
-                      <span style={{fontSize:10, padding:'2px 6px', borderRadius:2, color:SCLR[s.status]||G.dim, border:'1px solid '+(SCLR[s.status]||G.br)+'55'}}>{s.status}</span>
-                      {s.trust>0 && <span style={{fontSize:10, color:G.gold}}>{'★'.repeat(s.trust)}</span>}
+                      {s.srcType && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(SRC_CLR[s.srcType]||G.dim)+'25', color:SRC_CLR[s.srcType]||G.sub, border:'1px solid '+(SRC_CLR[s.srcType]||G.br)+'44'}}>{s.srcType}</span>}
+                      {s.cat && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(GUIDE_CLR[s.cat]||G.dim)+'20', color:GUIDE_CLR[s.cat]||G.sub, border:'1px solid '+(GUIDE_CLR[s.cat]||G.br)+'44'}}>{s.cat}</span>}
+                      <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, color:SCLR[s.status]||G.dim, border:'1px solid '+(SCLR[s.status]||G.br)+'55'}}>{s.status}</span>
+                      {s.trust>0 && <span style={{fontSize:12, color:G.gold}}>{'★'.repeat(s.trust)}</span>}
                     </div>
-                    <div style={{fontSize:14, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.title||'（未命名）'}</div>
-                    {s.url && <div style={{fontSize:11, color:G.dim, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.url}</div>}
+                    <div style={{fontSize:15, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.title||'（未命名）'}</div>
+                    {s.url && <div style={{fontSize:12, color:G.dim, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.url}</div>}
                   </div>
                   <div style={{display:'flex', gap:4, flexShrink:0}}>
-                    <button onClick={e=>{e.stopPropagation();openEdit(s);}} style={{...S.gh, padding:'4px 7px', fontSize:9}}>{T.edit}</button>
-                    <button onClick={e=>{e.stopPropagation();setSrcs(ss=>ss.filter(x=>x.id!==s.id));}} style={{...S.rd, padding:'4px 7px', fontSize:9}}>{T.del}</button>
+                    <button onClick={e=>{e.stopPropagation();openEdit(s);}} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                    <button onClick={e=>{e.stopPropagation();setSrcs(ss=>ss.filter(x=>x.id!==s.id));}} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
                   </div>
                 </div>
-                <div style={{textAlign:'center', color:'#3a3020', fontSize:11, marginTop:3}}>{s.expanded?'▲':'▼'}</div>
+                <div style={{textAlign:'center', color:'#3a3020', fontSize:13, marginTop:3}}>{s.expanded?'▲':'▼'}</div>
               </div>
 
               {/* EXPANDED TEMPLATE */}
@@ -658,7 +658,7 @@ function FXPanel({T}) {
     <div>
       {/* Quick converter */}
       <div style={{...S.card, marginBottom:14}}>
-        <div style={{...CZ, fontSize:9, letterSpacing:3, color:G.dim, marginBottom:12}}>{T.calcTitle}</div>
+        <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim, marginBottom:12}}>{T.calcTitle}</div>
         <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:8, alignItems:'center', marginBottom:12}}>
           <div>
             <Lbl t={T.fxFrom}/>
@@ -678,15 +678,15 @@ function FXPanel({T}) {
           <div><Lbl t={T.fxAmt}/><input style={{...S.inp, fontSize:16}} type="number" value={amt} onChange={e=>setAmt(e.target.value)} placeholder="100"/></div>
           <div>
             <div style={{fontSize:28, fontWeight:300, color:G.gold}}>{sym(tc)}{result.toFixed(2)}</div>
-            <div style={{fontSize:10, color:G.dim}}>{tc.split(' ')[0]}</div>
+            <div style={{fontSize:12, color:G.dim}}>{tc.split(' ')[0]}</div>
           </div>
         </div>
-        <div style={{marginTop:8, fontSize:11, color:G.dim}}>1 {sym(fc)} = {sym(tc)}{getRate(fc,tc).toFixed(4)}{Object.keys(overrides).length > 0 && <span style={{color:G.gold, marginLeft:6}}>● 已自訂</span>}</div>
+        <div style={{marginTop:8, fontSize:13, color:G.dim}}>1 {sym(fc)} = {sym(tc)}{getRate(fc,tc).toFixed(4)}{Object.keys(overrides).length > 0 && <span style={{color:G.gold, marginLeft:6}}>● 已自訂</span>}</div>
       </div>
 
       {/* Pair editor */}
       <div style={{...S.card, marginBottom:14}}>
-        <div style={{...CZ, fontSize:9, letterSpacing:3, color:G.dim, marginBottom:12}}>{T.pairEdit}</div>
+        <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim, marginBottom:12}}>{T.pairEdit}</div>
         <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:8, alignItems:'flex-end', marginBottom:10}}>
           <div>
             <Lbl t={T.pairFrom}/>
@@ -709,7 +709,7 @@ function FXPanel({T}) {
           </div>
           <button style={{...S.gold, padding:'10px 16px', flexShrink:0}} onClick={setPair}>{T.setPair}</button>
         </div>
-        <div style={{fontSize:11, color:G.dim, marginBottom:pA!==pB?8:0}}>
+        <div style={{fontSize:13, color:G.dim, marginBottom:pA!==pB?8:0}}>
           {pA!==pB && '目前: 1 ' + sym(pA) + ' = ' + sym(pB) + getRate(pA,pB).toFixed(4)}
         </div>
       </div>
@@ -717,9 +717,9 @@ function FXPanel({T}) {
       {/* Rate table */}
       <div style={{marginBottom:10}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
-          <div style={{...CZ, fontSize:9, letterSpacing:3, color:G.dim}}>所有匯率</div>
+          <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>所有匯率</div>
           {Object.keys(overrides).length > 0 && (
-            <button style={{...S.gh, fontSize:9, padding:'4px 8px'}} onClick={resetAll}>{T.resetFx}</button>
+            <button style={{...S.gh, fontSize:11, padding:'5px 9px'}} onClick={resetAll}>{T.resetFx}</button>
           )}
         </div>
         {pairs.map(([a,b]) => {
@@ -738,7 +738,7 @@ function FXPanel({T}) {
         })}
       </div>
 
-      <div style={{padding:'10px 12px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:11, color:G.dim, lineHeight:1.6}}>
+      <div style={{padding:'10px 12px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:13, color:G.dim, lineHeight:1.6}}>
         {T.fxNote}
       </div>
     </div>
@@ -751,10 +751,10 @@ function FXPanel({T}) {
 function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripName}) {
   return (
     <div style={{padding:18}}>
-      <div style={{...CZ, fontSize:9, letterSpacing:5, color:G.dim, marginBottom:20}}>⚙ {T.settingsTitle.toUpperCase()}</div>
+      <div style={{...CZ, fontSize:11, letterSpacing:3, color:G.dim, marginBottom:20}}>⚙ {T.settingsTitle.toUpperCase()}</div>
 
       <div style={{...S.card, marginBottom:14}}>
-        <div style={{...CZ, fontSize:10, letterSpacing:3, color:G.gold, marginBottom:14}}>✦ 偏好</div>
+        <div style={{...CZ, fontSize:12, letterSpacing:2, color:G.gold, marginBottom:14}}>✦ 偏好</div>
 
         <div style={{marginBottom:14}}>
           <Lbl t={T.defLang}/>
@@ -780,7 +780,7 @@ function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripNa
         </div>
       </div>
 
-      <div style={{padding:'14px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:12, color:G.dim, lineHeight:1.9}}>
+      <div style={{padding:'14px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:13, color:G.dim, lineHeight:1.9}}>
         ✦ VIAGGIO v2.0<br/>
         📱 資料（含照片）自動存於瀏覽器，清除 cookies 才會消失<br/>
         📤 花費與日記可匯出 CSV<br/>
@@ -790,7 +790,7 @@ function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripNa
 
       <div style={{marginTop:14}}>
         <button
-          style={{...S.rd, width:'100%', fontSize:10, padding:'10px'}}
+          style={{...S.rd, width:'100%', fontSize:12, padding:'11px'}}
           onClick={() => {
             if (window.confirm('確定要清除所有資料嗎？此操作無法復原。')) {
               ['commutes','entries','exps','lang','defCurr','tripName','guideSrcs'].forEach(k => {
@@ -942,7 +942,7 @@ function App() {
       <div style={{padding:'16px 20px 12px', borderBottom:'1px solid '+G.br}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
           <div>
-            <div style={{...CZ, fontSize:9, letterSpacing:5, color:G.dim}}>VIAGGIO · 行</div>
+            <div style={{...CZ, fontSize:11, letterSpacing:4, color:G.dim}}>VIAGGIO · 行</div>
             <div style={{fontSize:20, fontWeight:300, fontStyle:'italic', letterSpacing:2, marginTop:2}}>
               {tripName || '旅途攻略'}
             </div>
@@ -950,10 +950,10 @@ function App() {
           <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6}}>
             <div style={{display:'flex', gap:3}}>
               {['繁中','简中','EN','IT'].map(l => (
-                <button key={l} onClick={() => setLang(l)} style={l===lang ? {...S.gold, padding:'4px 8px', fontSize:9} : {...S.gh, padding:'4px 8px', fontSize:9}}>{l}</button>
+                <button key={l} onClick={() => setLang(l)} style={l===lang ? {...S.gold, padding:'5px 9px', fontSize:11} : {...S.gh, padding:'4px 8px', fontSize:9}}>{l}</button>
               ))}
             </div>
-            <button style={{...S.out, fontSize:9, padding:'4px 9px'}} onClick={() => csvDl(exps.map(e=>({Date:e.date,City:e.city,Shop:e.shop,Cat:e.category,Amt:e.amount,Cur:e.currency,Note:e.note})), 'expenses.csv')}>↓ CSV</button>
+            <button style={{...S.out, fontSize:11, padding:'5px 11px'}} onClick={() => csvDl(exps.map(e=>({Date:e.date,City:e.city,Shop:e.shop,Cat:e.category,Amt:e.amount,Cur:e.currency,Note:e.note})), 'expenses.csv')}>↓ CSV</button>
           </div>
         </div>
       </div>
@@ -961,8 +961,8 @@ function App() {
       {/* TAB BAR */}
       <div style={{display:'flex', borderBottom:'1px solid '+G.br, background:G.bg, position:'sticky', top:0, zIndex:10}}>
         {ICONS.map((ic,i) => (
-          <button key={i} onClick={() => setTab(i)} style={{flex:1, background:'transparent', border:'none', cursor:'pointer', padding:'7px 0', ...CZ, fontSize:7, letterSpacing:1, color:tab===i?G.gold:G.dim, position:'relative'}}>
-            <span style={{fontSize:13, display:'block', marginBottom:1}}>{ic}</span>
+          <button key={i} onClick={() => setTab(i)} style={{flex:1, background:'transparent', border:'none', cursor:'pointer', padding:'7px 0', ...CZ, fontSize:11, letterSpacing:0, color:tab===i?G.gold:G.dim, position:'relative'}}>
+            <span style={{fontSize:16, display:'block', marginBottom:2}}>{ic}</span>
             {T.tabs[i]}
             {tab===i && <span style={{position:'absolute', bottom:0, left:'15%', right:'15%', height:1, background:G.gold, display:'block'}}/>}
           </button>
@@ -971,7 +971,7 @@ function App() {
 
       <div style={{overflowY:'auto', height:'calc(100vh - 132px)', paddingBottom:24}}>
         {localStorage.getItem('vg_photoWarn') === '1' && (
-          <div style={{background:'rgba(155,106,106,.12)', border:'1px solid rgba(155,106,106,.3)', padding:'8px 14px', fontSize:11, color:'#c8948a', lineHeight:1.6, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <div style={{background:'rgba(155,106,106,.12)', border:'1px solid rgba(155,106,106,.3)', padding:'8px 14px', fontSize:13, color:'#c8948a', lineHeight:1.6, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
             <span>⚠ 儲存空間不足，部分照片未能保留（文字資料均已儲存）</span>
             <button onClick={() => { localStorage.removeItem('vg_photoWarn'); window.location.reload(); }} style={{background:'none', border:'none', color:'#c8948a', cursor:'pointer', fontSize:14}}>✕</button>
           </div>
@@ -996,7 +996,7 @@ function App() {
             {searched && (
               <div style={{marginTop:14}}>
                 <div style={{...S.card, fontSize:12, color:G.sub, lineHeight:1.7, marginBottom:8}}>{T.saveResult}</div>
-                <button style={{...S.out, width:'100%', fontSize:10}} onClick={() => setShowST(true)}>{T.saveLog}</button>
+                <button style={{...S.out, width:'100%', fontSize:12}} onClick={() => setShowST(true)}>{T.saveLog}</button>
               </div>
             )}
 
@@ -1007,14 +1007,14 @@ function App() {
                   <div key={c.id} style={{...S.card, display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                     <div style={{flex:1}}>
                       <div style={{fontSize:15, fontWeight:500, marginBottom:3}}>{c.from} → {c.to}</div>
-                      <div style={{fontSize:10, color:G.dim, marginBottom:4}}>{c.date}</div>
+                      <div style={{fontSize:12, color:G.dim, marginBottom:4}}>{c.date}</div>
                       <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
-                        {c.estTime && <div><span style={{fontSize:9, color:G.dim}}>{T.estTime} </span><span style={{fontSize:12}}>{c.estTime}</span></div>}
-                        {c.cost>0 && <div><span style={{fontSize:9, color:G.dim}}>{T.cost} </span><span style={{fontSize:12, color:G.gold}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
+                        {c.estTime && <div><span style={{fontSize:11, color:G.dim}}>{T.estTime} </span><span style={{fontSize:12}}>{c.estTime}</span></div>}
+                        {c.cost>0 && <div><span style={{fontSize:11, color:G.dim}}>{T.cost} </span><span style={{fontSize:12, color:G.gold}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
                       </div>
                       {c.note && <div style={{fontSize:11, color:G.sub, fontStyle:'italic', marginTop:3}}>{c.note}</div>}
                     </div>
-                    <button onClick={() => setCommutes(cs => cs.filter(x => x.id!==c.id))} style={{...S.rd, padding:'4px 8px', fontSize:9, marginLeft:8}}>{T.del}</button>
+                    <button onClick={() => setCommutes(cs => cs.filter(x => x.id!==c.id))} style={{...S.rd, padding:'5px 10px', fontSize:11, marginLeft:8}}>{T.del}</button>
                   </div>
                 ))}
               </div>
@@ -1031,7 +1031,7 @@ function App() {
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
               <div style={{fontSize:17, fontStyle:'italic'}}>{T.diaryTitle}</div>
               <div style={{display:'flex', gap:8}}>
-                <button style={{...S.gh, fontSize:9}} onClick={() => csvDl(entries.map(e=>({City:e.city,Country:e.country,Date:e.date,Rating:e.rating,Comment:e.comment,Tags:e.tags})), 'diary.csv')}>↓ CSV</button>
+                <button style={{...S.gh, fontSize:11}} onClick={() => csvDl(entries.map(e=>({City:e.city,Country:e.country,Date:e.date,Rating:e.rating,Comment:e.comment,Tags:e.tags})), 'diary.csv')}>↓ CSV</button>
                 <button style={S.gold} onClick={() => { setDF({city:'', country:'', date:'', rating:5, comment:'', tags:''}); setDPh([]); setEditDId(null); setShowDF(true); }}>{T.addDiary}</button>
               </div>
             </div>
@@ -1048,16 +1048,16 @@ function App() {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6}}>
                   <div>
                     <div style={{fontSize:16, fontWeight:500}}>{e.city}</div>
-                    <div style={{fontSize:10, color:G.dim}}>{e.country} · {e.date}</div>
+                    <div style={{fontSize:12, color:G.dim}}>{e.country} · {e.date}</div>
                   </div>
                   <div style={{display:'flex', gap:5, alignItems:'center'}}>
                     <Stars v={e.rating}/>
-                    <button onClick={() => openEditD(e)} style={{...S.gh, padding:'4px 7px', fontSize:9}}>{T.edit}</button>
-                    <button onClick={() => setEntries(es => es.filter(x => x.id!==e.id))} style={{...S.rd, padding:'4px 7px', fontSize:9}}>{T.del}</button>
+                    <button onClick={() => openEditD(e)} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                    <button onClick={() => setEntries(es => es.filter(x => x.id!==e.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
                   </div>
                 </div>
                 {e.comment && <div style={{fontSize:13, color:G.sub, lineHeight:1.7, fontStyle:'italic', marginBottom:8}}>"{e.comment}"</div>}
-                {e.tags && <div style={{display:'flex', gap:5, flexWrap:'wrap'}}>{e.tags.split(',').filter(Boolean).map((tg,j) => <span key={j} style={{fontSize:10, padding:'3px 6px', borderRadius:2, background:'rgba(212,168,83,.08)', color:G.gold, border:'1px solid rgba(212,168,83,.2)'}}>{tg.trim()}</span>)}</div>}
+                {e.tags && <div style={{display:'flex', gap:5, flexWrap:'wrap'}}>{e.tags.split(',').filter(Boolean).map((tg,j) => <span key={j} style={{fontSize:12, padding:'4px 8px', borderRadius:2, background:'rgba(212,168,83,.08)', color:G.gold, border:'1px solid rgba(212,168,83,.2)'}}>{tg.trim()}</span>)}</div>}
               </div>
             ))}
           </div>
@@ -1069,7 +1069,7 @@ function App() {
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
               <div style={{fontSize:17, fontStyle:'italic'}}>{T.expTitle}</div>
               <div style={{display:'flex', gap:8}}>
-                <button style={{...S.gh, fontSize:9}} onClick={() => csvDl(exps.map(e=>({Date:e.date,City:e.city,Shop:e.shop,Cat:e.category,Amt:e.amount,Cur:e.currency,Note:e.note})), 'expenses.csv')}>↓ CSV</button>
+                <button style={{...S.gh, fontSize:11}} onClick={() => csvDl(exps.map(e=>({Date:e.date,City:e.city,Shop:e.shop,Cat:e.category,Amt:e.amount,Cur:e.currency,Note:e.note})), 'expenses.csv')}>↓ CSV</button>
                 <button style={S.gold} onClick={() => { setEF({date:'', city:'', shop:'', category:'', amount:'', currency:defCurr, note:''}); setEPh([]); setEditEId(null); setShowEF(true); }}>{T.addExp}</button>
               </div>
             </div>
@@ -1083,18 +1083,18 @@ function App() {
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                   <div style={{flex:1}}>
                     <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap'}}>
-                      {e.category && <span style={{fontSize:10, padding:'2px 7px', borderRadius:2, background:(EXP_CLR[e.category]||G.dim)+'20', color:EXP_CLR[e.category]||G.sub, border:'1px solid '+(EXP_CLR[e.category]||G.br)+'33'}}>{e.category}</span>}
+                      {e.category && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(EXP_CLR[e.category]||G.dim)+'20', color:EXP_CLR[e.category]||G.sub, border:'1px solid '+(EXP_CLR[e.category]||G.br)+'33'}}>{e.category}</span>}
                       {e.shop && <span style={{fontSize:14, fontWeight:500}}>{e.shop}</span>}
                     </div>
-                    <div style={{fontSize:10, color:G.dim, marginBottom:3}}>{e.city} · {e.date}</div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:3}}>{e.city} · {e.date}</div>
                     {e.note && <div style={{fontSize:12, color:G.sub, fontStyle:'italic'}}>{e.note}</div>}
                   </div>
                   <div style={{textAlign:'right', marginLeft:12}}>
                     <div style={{fontSize:20, fontWeight:300, color:G.gold}}>{e.currency&&e.currency.split(' ')[1]}{e.amount}</div>
-                    <div style={{fontSize:10, color:G.dim, marginBottom:4}}>{e.currency&&e.currency.split(' ')[0]}</div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:4}}>{e.currency&&e.currency.split(' ')[0]}</div>
                     <div style={{display:'flex', gap:4}}>
-                      <button onClick={() => openEditE(e)} style={{...S.gh, padding:'3px 7px', fontSize:9}}>{T.edit}</button>
-                      <button onClick={() => setExps(es => es.filter(x => x.id!==e.id))} style={{...S.rd, padding:'3px 7px', fontSize:9}}>{T.del}</button>
+                      <button onClick={() => openEditE(e)} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                      <button onClick={() => setExps(es => es.filter(x => x.id!==e.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
                     </div>
                   </div>
                 </div>
@@ -1108,9 +1108,9 @@ function App() {
           <div style={{padding:18}}>
             <div style={{background:G.bg4, border:'1px solid '+G.br, borderRadius:6, padding:14, marginBottom:14}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
-                <div style={{...CZ, fontSize:9, letterSpacing:3, color:G.dim}}>{T.yearTotal}</div>
+                <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>{T.yearTotal}</div>
                 <div style={{position:'relative'}}>
-                  <button onClick={() => setShowCDD(v=>!v)} style={{...S.gh, fontSize:10, padding:'5px 9px', display:'flex', alignItems:'center', gap:4}}>
+                  <button onClick={() => setShowCDD(v=>!v)} style={{...S.gh, fontSize:12, padding:'6px 10px', display:'flex', alignItems:'center', gap:4}}>
                     {sCurr}<span style={{color:G.gold}}>▾</span>
                   </button>
                   {showCDD && (
@@ -1166,10 +1166,10 @@ function App() {
                 {commutes.map(c => (
                   <div key={c.id} style={S.card}>
                     <div style={{fontSize:15, fontWeight:500, marginBottom:3}}>{c.from} → {c.to}</div>
-                    <div style={{fontSize:10, color:G.dim, marginBottom:5}}>{c.date}</div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:5}}>{c.date}</div>
                     <div style={{display:'flex', gap:14, flexWrap:'wrap'}}>
-                      {c.estTime && <div><span style={{fontSize:9, color:G.dim}}>{T.estTime} </span><span style={{fontSize:13, color:G.gold}}>{c.estTime}</span></div>}
-                      {c.cost>0 && <div><span style={{fontSize:9, color:G.dim}}>{T.cost} </span><span style={{fontSize:13, color:G.green}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
+                      {c.estTime && <div><span style={{fontSize:11, color:G.dim}}>{T.estTime} </span><span style={{fontSize:13, color:G.gold}}>{c.estTime}</span></div>}
+                      {c.cost>0 && <div><span style={{fontSize:11, color:G.dim}}>{T.cost} </span><span style={{fontSize:13, color:G.green}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
                     </div>
                     {c.note && <div style={{fontSize:11, color:G.sub, fontStyle:'italic', marginTop:4}}>{c.note}</div>}
                   </div>
