@@ -76,6 +76,9 @@ const TR = {
     defCurrency:'預設幣別', defLang:'預設語言',
     themeNote:'更多設定功能開發中',
     tripName:'旅程名稱（選填）',
+    allRates:'所有匯率',
+    currentRate:'目前',
+    prefTitle:'✦ 偏好',
     guideTotal:'份攻略',
     guideFilled:'已填寫',
     photoClick:'點擊選擇照片',
@@ -125,6 +128,9 @@ const TR = {
     defCurrency:'默认币别', defLang:'默认语言',
     themeNote:'更多设置功能开发中',
     tripName:'旅程名称（选填）',
+    allRates:'所有汇率',
+    currentRate:'目前',
+    prefTitle:'✦ 偏好',
     guideTotal:'份攻略',
     guideFilled:'已填写',
     photoClick:'点击选择照片',
@@ -174,6 +180,9 @@ const TR = {
     defCurrency:'Default Currency', defLang:'Default Language',
     themeNote:'More settings coming soon',
     tripName:'Trip Name (optional)',
+    allRates:'All Rates',
+    currentRate:'Current',
+    prefTitle:'✦ Preferences',
     guideTotal:'guides',
     guideFilled:'filled',
     photoClick:'Tap to select photos',
@@ -223,6 +232,9 @@ const TR = {
     defCurrency:'Valuta predefinita', defLang:'Lingua predefinita',
     themeNote:'Altre impostazioni in arrivo',
     tripName:'Nome viaggio (opzionale)',
+    allRates:'Tutti i tassi',
+    currentRate:'Attuale',
+    prefTitle:'✦ Preferenze',
     guideTotal:'guide',
     guideFilled:'compilate',
     photoClick:'Tocca per scegliere foto',
@@ -754,14 +766,14 @@ function FXPanel({T}) {
           <button style={{...S.gold, padding:'10px 16px', flexShrink:0}} onClick={setPair}>{T.setPair}</button>
         </div>
         <div style={{fontSize:13, color:G.dim, marginBottom:pA!==pB?8:0}}>
-          {pA!==pB && '目前: 1 ' + sym(pA) + ' = ' + sym(pB) + getRate(pA,pB).toFixed(4)}
+          {pA!==pB && T.currentRate + ': 1 ' + sym(pA) + ' = ' + sym(pB) + getRate(pA,pB).toFixed(4)}
         </div>
       </div>
 
       {/* Rate table */}
       <div style={{marginBottom:10}}>
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
-          <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>所有匯率</div>
+          <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>{T.allRates}</div>
           {Object.keys(overrides).length > 0 && (
             <button style={{...S.gh, fontSize:11, padding:'5px 9px'}} onClick={resetAll}>{T.resetFx}</button>
           )}
@@ -798,7 +810,7 @@ function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripNa
       <div style={{...CZ, fontSize:11, letterSpacing:3, color:G.dim, marginBottom:20}}>⚙ {T.settingsTitle.toUpperCase()}</div>
 
       <div style={{...S.card, marginBottom:14}}>
-        <div style={{...CZ, fontSize:12, letterSpacing:2, color:G.gold, marginBottom:14}}>✦ 偏好</div>
+        <div style={{...CZ, fontSize:12, letterSpacing:2, color:G.gold, marginBottom:14}}>{T.prefTitle}</div>
 
         <div style={{marginBottom:14}}>
           <Lbl t={T.defLang}/>
