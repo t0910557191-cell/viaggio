@@ -76,6 +76,11 @@ const TR = {
     defCurrency:'預設幣別', defLang:'預設語言',
     themeNote:'更多設定功能開發中',
     tripName:'旅程名稱（選填）',
+    appInfo1:'資料（含照片）自動存於瀏覽器，清除 cookies 才會消失',
+    appInfo2:'花費與日記可匯出 CSV',
+    appInfo3:'交通功能串接 Google Maps（免費）',
+    clearData:'清除所有資料（重置 App）',
+    clearConfirm:'確定要清除所有資料嗎？此操作無法復原。',
   },
   '简中': {
     tabs:['交通','攻略','日记','花费','统计','设定'],
@@ -114,6 +119,11 @@ const TR = {
     defCurrency:'默认币别', defLang:'默认语言',
     themeNote:'更多设置功能开发中',
     tripName:'旅程名称（选填）',
+    appInfo1:'数据（含照片）自动存于浏览器，清除 cookies 才会消失',
+    appInfo2:'花费与日记可导出 CSV',
+    appInfo3:'交通功能连接 Google Maps（免费）',
+    clearData:'清除所有数据（重置 App）',
+    clearConfirm:'确定要清除所有数据吗？此操作无法撤销。',
   },
   'EN': {
     tabs:['Transport','Guide','Diary','Expenses','Stats','Settings'],
@@ -152,6 +162,11 @@ const TR = {
     defCurrency:'Default Currency', defLang:'Default Language',
     themeNote:'More settings coming soon',
     tripName:'Trip Name (optional)',
+    appInfo1:'Data (incl. photos) saved in browser — cleared only if you clear cookies',
+    appInfo2:'Expenses & diary can be exported as CSV',
+    appInfo3:'Transport uses Google Maps (free)',
+    clearData:'Clear All Data (Reset App)',
+    clearConfirm:'Are you sure you want to clear all data? This cannot be undone.',
   },
   'IT': {
     tabs:['Trasporti','Guida','Diario','Spese','Statistiche','Impostazioni'],
@@ -190,6 +205,11 @@ const TR = {
     defCurrency:'Valuta predefinita', defLang:'Lingua predefinita',
     themeNote:'Altre impostazioni in arrivo',
     tripName:'Nome viaggio (opzionale)',
+    appInfo1:'Dati (foto incluse) salvati nel browser — si cancellano solo svuotando i cookie',
+    appInfo2:'Spese e diario esportabili in CSV',
+    appInfo3:'Trasporti collegati a Google Maps (gratuito)',
+    clearData:'Cancella tutti i dati (Reset App)',
+    clearConfirm:'Sei sicuro di voler cancellare tutti i dati? Questa azione è irreversibile.',
   },
 };
 
@@ -782,9 +802,9 @@ function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripNa
 
       <div style={{padding:'14px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:13, color:G.dim, lineHeight:1.9}}>
         ✦ VIAGGIO v2.0<br/>
-        📱 資料（含照片）自動存於瀏覽器，清除 cookies 才會消失<br/>
-        📤 花費與日記可匯出 CSV<br/>
-        🗺 交通功能串接 Google Maps（免費）<br/>
+        📱 {T.appInfo1}<br/>
+        📤 {T.appInfo2}<br/>
+        🗺 {T.appInfo3}<br/>
         <span style={{color:G.dim, fontSize:11}}>{T.themeNote}</span>
       </div>
 
@@ -792,7 +812,7 @@ function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripNa
         <button
           style={{...S.rd, width:'100%', fontSize:12, padding:'11px'}}
           onClick={() => {
-            if (window.confirm('確定要清除所有資料嗎？此操作無法復原。')) {
+            if (window.confirm(T.clearConfirm)) {
               ['commutes','entries','exps','lang','defCurr','tripName','guideSrcs'].forEach(k => {
                 try { localStorage.removeItem('vg_' + k); } catch(e) {}
               });
@@ -800,7 +820,7 @@ function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripNa
             }
           }}
         >
-          🗑 清除所有資料（重置 App）
+          {T.clearData}
         </button>
       </div>
     </div>
