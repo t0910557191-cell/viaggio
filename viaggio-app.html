@@ -204,7 +204,22 @@ function csvDl(rows, fn) {
 function readImg(file) {
   return new Promise(res => {
     const r = new FileReader();
-    r.onload = e => res({url:e.target.result, name:file.name});
+    r.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        res({url: canvas.toDataURL('image/jpeg', 0.7), name: file.name});
+      };
+      img.src = e.target.result;
+    };
     r.readAsDataURL(file);
   });
 }
@@ -390,7 +405,7 @@ function GuideTab({T}) {
     },
   ];
 
-  const [srcs, setSrcs] = useState(initData);
+  const [srcs, setSrcs] = useStorage('guideSrcs', initData);
   const [cityF, setCityF] = useState('');
   const [catF, setCatF] = useState('');
   const [stF, setStF] = useState('');
@@ -767,30 +782,80 @@ function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripNa
 
       <div style={{padding:'14px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:12, color:G.dim, lineHeight:1.9}}>
         ✦ VIAGGIO v2.0<br/>
-        📱 純前端應用，資料存於瀏覽器記憶體<br/>
+        📱 資料（含照片）自動存於瀏覽器，清除 cookies 才會消失<br/>
         📤 花費與日記可匯出 CSV<br/>
         🗺 交通功能串接 Google Maps（免費）<br/>
         <span style={{color:G.dim, fontSize:11}}>{T.themeNote}</span>
+      </div>
+
+      <div style={{marginTop:14}}>
+        <button
+          style={{...S.rd, width:'100%', fontSize:10, padding:'10px'}}
+          onClick={() => {
+            if (window.confirm('確定要清除所有資料嗎？此操作無法復原。')) {
+              ['commutes','entries','exps','lang','defCurr','tripName','guideSrcs'].forEach(k => {
+                try { localStorage.removeItem('vg_' + k); } catch(e) {}
+              });
+              window.location.reload();
+            }
+          }}
+        >
+          🗑 清除所有資料（重置 App）
+        </button>
       </div>
     </div>
   );
 }
 
+// ── LOCAL STORAGE PERSISTENCE ──
+function trySave(key, val) {
+  try {
+    localStorage.setItem('vg_' + key, JSON.stringify(val));
+  } catch(e) {
+    try {
+      const safe = Array.isArray(val)
+        ? val.map(item => item && typeof item === 'object' && 'photos' in item ? {...item, photos:[]} : item)
+        : val;
+      localStorage.setItem('vg_' + key, JSON.stringify(safe));
+      localStorage.setItem('vg_photoWarn', '1');
+    } catch(e2) {}
+  }
+}
+
+function useStorage(key, init) {
+  const [val, setVal] = useState(() => {
+    try {
+      const stored = localStorage.getItem('vg_' + key);
+      return stored ? JSON.parse(stored) : init;
+    } catch(e) { return init; }
+  });
+  const set = v => { setVal(v); trySave(key, v); };
+  const setFn = fn => {
+    setVal(prev => {
+      const next = fn(prev);
+      trySave(key, next);
+      return next;
+    });
+  };
+  return [val, (v) => typeof v === 'function' ? setFn(v) : set(v)];
+}
+
+
 // ══════════════════════════════════════════════
 // MAIN APP
 // ══════════════════════════════════════════════
 function App() {
-  const [lang, setLang] = useState('繁中');
+  const [lang, setLang] = useStorage('lang', '繁中');
   const T = TR[lang];
   const [tab, setTab] = useState(0);
-  const [defCurr, setDefCurr] = useState('CNY ¥');
-  const [tripName, setTripName] = useState('');
+  const [defCurr, setDefCurr] = useStorage('defCurr', 'CNY ¥');
+  const [tripName, setTripName] = useStorage('tripName', '');
 
   // Transport
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [searched, setSearched] = useState(false);
-  const [commutes, setCommutes] = useState([
+  const [commutes, setCommutes] = useStorage('commutes', [
     {id:1, date:'2025-04-10', from:'北京', to:'上海', estTime:'4小時18分', cost:553, currency:'CNY ¥', note:'高鐵 G1次'},
     {id:2, date:'2025-09-03', from:'Paris', to:'Roma', estTime:'6小時50分', cost:89, currency:'EUR €', note:'TGV Lyria'},
   ]);
@@ -798,7 +863,7 @@ function App() {
   const [stF, setStF] = useState({date:'', estTime:'', cost:'', currency:'CNY ¥', note:''});
 
   // Diary
-  const [entries, setEntries] = useState([
+  const [entries, setEntries] = useStorage('entries', [
     {id:1, city:'北京', country:'中国', date:'2025-04-10', rating:5, comment:'故宮清晨的光線絕美，早起絕對值得！', photos:[], tags:'故宮,歷史,必去'},
     {id:2, city:'Roma', country:'意大利', date:'2025-09-03', rating:5, comment:'Trastevere di notte — perfetto.', photos:[], tags:'Roma,notte,gelato'},
   ]);
@@ -808,7 +873,7 @@ function App() {
   const [dPh, setDPh] = useState([]);
 
   // Expenses
-  const [exps, setExps] = useState([
+  const [exps, setExps] = useStorage('exps', [
     {id:1, date:'2025-04-10', city:'北京', shop:'全聚德', category:'餐飲', amount:288, currency:'CNY ¥', note:'烤鴨', photos:[]},
     {id:2, date:'2025-04-11', city:'北京', shop:'故宮', category:'景點門票', amount:60, currency:'CNY ¥', note:'', photos:[]},
     {id:3, date:'2025-09-03', city:'Roma', shop:'B&B Trastevere', category:'住宿', amount:95, currency:'EUR €', note:'2晚', photos:[]},
@@ -905,6 +970,12 @@ function App() {
       </div>
 
       <div style={{overflowY:'auto', height:'calc(100vh - 132px)', paddingBottom:24}}>
+        {localStorage.getItem('vg_photoWarn') === '1' && (
+          <div style={{background:'rgba(155,106,106,.12)', border:'1px solid rgba(155,106,106,.3)', padding:'8px 14px', fontSize:11, color:'#c8948a', lineHeight:1.6, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <span>⚠ 儲存空間不足，部分照片未能保留（文字資料均已儲存）</span>
+            <button onClick={() => { localStorage.removeItem('vg_photoWarn'); window.location.reload(); }} style={{background:'none', border:'none', color:'#c8948a', cursor:'pointer', fontSize:14}}>✕</button>
+          </div>
+        )}
 
         {/* TRANSPORT */}
         {tab===0 && (
