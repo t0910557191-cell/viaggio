@@ -860,6 +860,7 @@ function App() {
     {id:2, date:'2025-09-03', from:'Paris', to:'Roma', estTime:'6小時50分', cost:89, currency:'EUR €', note:'TGV Lyria'},
   ]);
   const [showST, setShowST] = useState(false);
+  const [editCId, setEditCId] = useState(null);
   const [stF, setStF] = useState({date:'', estTime:'', cost:'', currency:'CNY ¥', note:''});
 
   // Diary
@@ -911,8 +912,14 @@ function App() {
 
   const saveCommute = () => {
     if (!stF.date) return;
-    setCommutes(cs => [{id:Date.now(), from:from.trim(), to:to.trim(), ...stF, cost:parseFloat(stF.cost)||0}, ...cs]);
-    setShowST(false); setSearched(false);
+    if (editCId) {
+      setCommutes(cs => cs.map(c => c.id===editCId ? {...c, ...stF, cost:parseFloat(stF.cost)||0} : c));
+      setEditCId(null);
+    } else {
+      setCommutes(cs => [{id:Date.now(), from:from.trim(), to:to.trim(), ...stF, cost:parseFloat(stF.cost)||0}, ...cs]);
+      setSearched(false);
+    }
+    setShowST(false);
     setStF({date:'', estTime:'', cost:'', currency:'CNY ¥', note:''});
   };
 
@@ -1014,7 +1021,14 @@ function App() {
                       </div>
                       {c.note && <div style={{fontSize:11, color:G.sub, fontStyle:'italic', marginTop:3}}>{c.note}</div>}
                     </div>
-                    <button onClick={() => setCommutes(cs => cs.filter(x => x.id!==c.id))} style={{...S.rd, padding:'5px 10px', fontSize:11, marginLeft:8}}>{T.del}</button>
+                    <div style={{display:'flex', gap:5, marginLeft:8, flexShrink:0}}>
+                      <button onClick={() => {
+                        setStF({date:c.date, estTime:c.estTime||'', cost:c.cost||'', currency:c.currency||'CNY ¥', note:c.note||''});
+                        setEditCId(c.id);
+                        setShowST(true);
+                      }} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                      <button onClick={() => setCommutes(cs => cs.filter(x => x.id!==c.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1172,6 +1186,15 @@ function App() {
                       {c.cost>0 && <div><span style={{fontSize:11, color:G.dim}}>{T.cost} </span><span style={{fontSize:13, color:G.green}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
                     </div>
                     {c.note && <div style={{fontSize:11, color:G.sub, fontStyle:'italic', marginTop:4}}>{c.note}</div>}
+                    <div style={{display:'flex', gap:6, marginTop:8}}>
+                      <button onClick={() => {
+                        setStF({date:c.date, estTime:c.estTime||'', cost:c.cost||'', currency:c.currency||'CNY ¥', note:c.note||''});
+                        setEditCId(c.id);
+                        setShowST(true);
+                        setTab(0);
+                      }} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                      <button onClick={() => setCommutes(cs => cs.filter(x => x.id!==c.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1185,15 +1208,18 @@ function App() {
       </div>
 
       {/* MODALS */}
-      <Modal show={showST} onClose={() => setShowST(false)} title={T.saveLog}>
+      <Modal show={showST} onClose={() => setShowST(false)} title={editCId ? T.edit + ' 行程' : T.saveLog}>
+        {editCId && (
+          <div style={{marginBottom:12, fontSize:13, color:G.sub}}>
+            {commutes.find(c=>c.id===editCId)?.from} → {commutes.find(c=>c.id===editCId)?.to}
+          </div>
+        )}
+        <div style={{marginBottom:10}}><Lbl t={T.date + ' *'}/><input style={S.inp} type="date" value={stF.date} onChange={e=>setStF(f=>({...f,date:e.target.value}))}/></div>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
-          <div><Lbl t={T.date}/><input style={S.inp} type="date" value={stF.date} onChange={e=>setStF(f=>({...f,date:e.target.value}))}/></div>
           <div><Lbl t={T.estTime}/><input style={S.inp} placeholder="4h 30m" value={stF.estTime} onChange={e=>setStF(f=>({...f,estTime:e.target.value}))}/></div>
-        </div>
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
           <div><Lbl t={T.cost}/><input style={S.inp} type="number" placeholder="0" value={stF.cost} onChange={e=>setStF(f=>({...f,cost:e.target.value}))}/></div>
-          <div><Lbl t={T.currency2}/><select style={{...S.inp, appearance:'none'}} value={stF.currency} onChange={e=>setStF(f=>({...f,currency:e.target.value}))}>{CURR.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
         </div>
+        <div style={{marginBottom:10}}><Lbl t={T.currency2}/><select style={{...S.inp, appearance:'none'}} value={stF.currency} onChange={e=>setStF(f=>({...f,currency:e.target.value}))}>{CURR.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
         <div style={{marginBottom:14}}><Lbl t={T.note}/><input style={S.inp} placeholder="高鐵, TGV, EasyJet..." value={stF.note} onChange={e=>setStF(f=>({...f,note:e.target.value}))}/></div>
         <div style={{display:'flex', gap:10}}>
           <button style={{...S.gh, flex:1}} onClick={() => setShowST(false)}>{T.cancel}</button>
@@ -1204,16 +1230,21 @@ function App() {
       <Modal show={showDF} onClose={() => {setShowDF(false); setEditDId(null);}} title={editDId ? T.edit+' 日記' : T.addDiary}>
         <Photos photos={dPh} set={setDPh}/>
         <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
-          <div><Lbl t={T.city}/><input style={S.inp} placeholder="北京, Roma..." value={dF.city} onChange={e=>setDF(p=>({...p,city:e.target.value}))}/></div>
+          <div><Lbl t={T.city + ' *'}/><input style={{...S.inp, borderColor: dF.city?G.br:'rgba(212,168,83,.4)'}} placeholder="北京, Roma..." value={dF.city} onChange={e=>setDF(p=>({...p,city:e.target.value}))}/></div>
           <div><Lbl t={T.country}/><input style={S.inp} placeholder="中国, Italia..." value={dF.country} onChange={e=>setDF(p=>({...p,country:e.target.value}))}/></div>
         </div>
-        <div style={{marginBottom:10}}><Lbl t={T.date}/><input style={S.inp} type="date" value={dF.date} onChange={e=>setDF(p=>({...p,date:e.target.value}))}/></div>
+        {editCId && (
+          <div style={{marginBottom:12, fontSize:13, color:G.sub}}>
+            {commutes.find(c=>c.id===editCId)?.from} → {commutes.find(c=>c.id===editCId)?.to}
+          </div>
+        )}
+        <div style={{marginBottom:10}}><Lbl t={T.date + ' *'}/><input style={{...S.inp, borderColor: dF.date?G.br:'rgba(212,168,83,.4)'}} type="date" value={dF.date} onChange={e=>setDF(p=>({...p,date:e.target.value}))}/></div>
         <div style={{marginBottom:10}}><Lbl t={T.rating}/><Stars v={dF.rating} on={v=>setDF(p=>({...p,rating:v}))}/></div>
         <div style={{marginBottom:10}}><Lbl t={T.comment}/><textarea style={{...S.ta, minHeight:80}} value={dF.comment} onChange={e=>setDF(p=>({...p,comment:e.target.value}))} placeholder="你的旅行心得..."/></div>
         <div style={{marginBottom:14}}><Lbl t={T.tags}/><input style={S.inp} value={dF.tags} onChange={e=>setDF(p=>({...p,tags:e.target.value}))} placeholder="美食,打卡,必去"/></div>
         <div style={{display:'flex', gap:10}}>
           <button style={{...S.gh, flex:1}} onClick={() => {setShowDF(false); setEditDId(null);}}>{T.cancel}</button>
-          <button style={{...S.gold, flex:2}} onClick={submitD}>{T.save}</button>
+          <button style={{...S.gold, flex:2, opacity:(!dF.city||!dF.date)?0.5:1}} onClick={submitD}>{T.save}</button>
         </div>
       </Modal>
 
