@@ -1,0 +1,1832 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>VIAGGIO</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cinzel:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#0f0d0a;min-height:100vh}
+*{box-sizing:border-box}
+::-webkit-scrollbar{width:0}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.6)}
+select option{background:#1a1710;color:#e8dcc8}
+</style>
+</head><body>
+<div id="root"></div>
+<div id="error-display" style="display:none;padding:20px;background:#300;color:#f88;font-family:monospace;font-size:12px;white-space:pre-wrap;position:fixed;top:0;left:0;right:0;z-index:9999;max-height:50vh;overflow:auto"></div>
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var d = document.getElementById('error-display');
+  d.style.display = 'block';
+  d.textContent = 'ERROR: ' + msg + '\nLine: ' + line + ', Col: ' + col + '\nFile: ' + src + '\n\n' + (err && err.stack || '');
+  return false;
+};
+</script>
+<script>
+// Clear old sample data on version change
+if (localStorage.getItem('vg_version') !== '3') {
+  ['commutes','entries','exps','guideSrcs','photoWarn'].forEach(k => {
+    try { localStorage.removeItem('vg_' + k); } catch(e) {}
+  });
+  localStorage.setItem('vg_version', '3');
+}
+</script>
+<script type="text/babel">
+
+const {useState, useRef, useEffect} = React;
+
+// ── CONSTANTS ──
+const CURR = ['CNY ¥','EUR €','USD $','TWD NT$','CAD C$','PLN zł'];
+// Base rates to USD (used as fallback, user can override any pair)
+const BASE_FX = {'CNY ¥':0.138,'EUR €':1.085,'USD $':1,'TWD NT$':0.031,'CAD C$':0.74,'PLN zł':0.25};
+const SRC_TYPES = ['小紅書','部落格','YouTube','Google Maps','Tripadvisor','官方網站','IG','其他'];
+const SRC_CLR = {'小紅書':'#e05a5a','部落格':'#7a9b6a','YouTube':'#c0504d','Google Maps':'#6a9bc0','Tripadvisor':'#3a9b7a','官方網站':'#8b7355','IG':'#9b7a8a','其他':'#7a8a7a'};
+const GUIDE_CATS = ['餐廳','咖啡廳','博物館/展覽','住宿','景點/打卡','交通','購物','綜合','其他'];
+const GUIDE_CLR = {'餐廳':'#7a9b6a','咖啡廳':'#8b7355','博物館/展覽':'#6a7a9b','住宿':'#9b8a6a','景點/打卡':'#d4a853','交通':'#7a8a9b','購物':'#9b7a8a','綜合':'#8a7a9b','其他':'#7a8a7a'};
+const EXP_CATS = ['住宿','餐飲','交通','景點門票','購物','其他'];
+const EXP_CLR = {'住宿':'#8b7355','餐飲':'#7a9b6a','交通':'#6a7a9b','景點門票':'#9b8a6a','購物':'#9b7a8a','其他':'#7a8a7a'};
+const STATUS = ['未讀','已讀','已去過 ✓'];
+const SCLR = {'未讀':'#6b5f4a','已讀':'#8a9b6a','已去過 ✓':'#d4a853'};
+// STAR_LABELS now comes from T.starLabels
+
+// ── TRANSLATIONS ──
+const TR = {
+  '繁中': {
+    tabs:['日曆','交通','攻略','日記','花費','統計','設定'],
+    from:'出發地', to:'目的地', openMaps:'開啟 Google Maps',
+    saveLog:'儲存行程', tripLog:'行程記錄', estTime:'預估時間',
+    cost:'費用', note:'備注', del:'刪', edit:'編', save:'儲存', cancel:'取消',
+    addSrc:'+ 新增攻略', noSources:'暫無攻略，點右上角新增',
+    filterCity:'🔍 城市...', allCats:'所有分類', allStatus:'所有狀態',
+    city:'城市', country:'國家', date:'日期', rating:'評分',
+    comment:'心得', tags:'標籤', shop:'店名/地點',
+    category:'類別', amount:'金額', currency:'幣別',
+    addDiary:'+ 寫日記', diaryTitle:'旅行日記',
+    addExp:'+ 新增', expTitle:'花費記錄',
+    yearTotal:'今年旅遊總花費', monthly:'每月', byCity:'每城市',
+    guideStats:'攻略統計', fx:'匯率', commute:'通勤',
+    mapsInfo:'✓ 點查詢直接開啟 Google Maps，查看真實班次與票價',
+    saveResult:'已開啟 Google Maps，可手動填入時間與費用',
+    transport:'路線查詢', srcTitle:'標題/名稱', srcType:'來源類型',
+    url:'來源 URL（選填）', status:'狀態', personalNote:'個人備注',
+    templateTitle:'攻略模板', tBasic:'基本資訊', tTransport:'交通',
+    tFood:'飲食推薦', tSights:'景點門票', tStay:'住宿',
+    tSecret:'個人秘笈', tTrust:'可信度評分',
+    nearestAirport:'最近機場', howToGet:'造訪方式',
+    transportTips:'交通建議', mustEat:'必吃推薦', discount:'優惠呼視',
+    bestTime:'最佳空腹時間', ticketPrice:'門票價格', openHours:'開放時間',
+    queueTip:'排隊建議', stayArea:'建議住宿區域', stayNote:'住宿注意事項',
+    myTips:'我的私房Tips', specialReminder:'特別提醒',
+    trustScore:'對此攻略的信任度', freeNote:'自由備注',
+    currency2:'幣別',
+    // FX
+    fxTitle:'匯率換算', calcTitle:'即時換算',
+    fxFrom:'從', fxTo:'到', fxAmt:'金額',
+    pairEdit:'手動設定匯率', pairFrom:'幣別 A', pairTo:'幣別 B',
+    pairRate:'1 A = ? B', setPair:'設定', resetFx:'恢復預設',
+    fxNote:'⚠ 自訂匯率僅本次使用，重新整理後恢復預設',
+    // Settings (preferences only)
+    settingsTitle:'偏好設定',
+    defCurrency:'預設幣別', defLang:'預設語言',
+    themeNote:'更多設定功能開發中',
+    tripName:'旅程名稱（選填）',
+    calTitle:'日曆',
+    addPlan:'+ 新增旅遊計畫',
+    planName:'城市 / 旅程名稱',
+    planStart:'出發日期',
+    planEnd:'結束日期',
+    planColor:'顏色標籤',
+    noPlan:'暫無旅遊計畫，點右上角新增',
+    addTrip:'+ 新增行程',
+    tripFrom:'出發地',
+    tripTo:'目的地',
+    estTimePH:'4小時30分',
+    photo:'照片',
+    hours:'小时',
+    dateErrEnd:'结束日期不能早于开始日期',
+    mins:'分',
+    hours:'小時',
+    dateErrEnd:'結束日期不能早於開始日期',
+    mins:'分',
+    countries:'国家统计',
+    countriesTotal:'今年去了',
+    countriesUnit:'个国家',
+    monthlyCountries:'每月国家数',
+    countriesList:'去过的国家',
+    countries:'國家統計',
+    countriesTotal:'今年去了',
+    countriesUnit:'個國家',
+    monthlyCountries:'每月國家數',
+    countriesList:'去過的國家',
+    editTrip:'编辑行程',
+    notePlaceholder:'高铁、TGV、EasyJet...',
+    srcTypeLabels:['小红书','博客','YouTube','Google Maps','Tripadvisor','官方网站','IG','其他'],
+    editTrip:'編輯行程',
+    notePlaceholder:'高鐵、TGV、EasyJet...',
+    srcTypeLabels:['小紅書','部落格','YouTube','Google Maps','Tripadvisor','官方網站','IG','其他'],
+    urlLabel:'來源連結',
+    starLabels:['','差','普通','還可以','推薦','必去！'],
+    photoWarn:'⚠ 儲存空間不足，部分照片未能保留（文字資料均已儲存）',
+    noRecords:'暫無記錄',
+    noData:'暫無資料',
+    customized:'● 已自訂',
+    selectLang:'選擇語言',
+    selectCurr:'選擇幣別',
+    allRates:'所有匯率',
+    currentRate:'目前',
+    prefTitle:'✦ 偏好',
+    guideTotal:'份攻略',
+    guideFilled:'已填寫',
+    photoClick:'點擊選擇照片',
+    statusLabels:['未讀', '已讀', '已去過 ✓'],
+    expCatLabels:['住宿', '餐飲', '交通', '景點門票', '購物', '其他'],
+    guideCatLabels:['餐廳', '咖啡廳', '博物館/展覽', '住宿', '景點/打卡', '交通', '購物', '綜合', '其他'],
+    appInfo1:'資料（含照片）自動存於瀏覽器，清除 cookies 才會消失',
+    appInfo2:'花費與日記可匯出 CSV',
+    appInfo3:'交通功能串接 Google Maps（免費）',
+    clearData:'清除所有資料（重置 App）',
+    clearConfirm:'確定要清除所有資料嗎？此操作無法復原。',
+  },
+  '简中': {
+    tabs:['日历','交通','攻略','日记','花费','统计','设定'],
+    from:'出发地', to:'目的地', openMaps:'开启 Google Maps',
+    saveLog:'保存行程', tripLog:'行程记录', estTime:'预估时间',
+    cost:'费用', note:'备注', del:'删', edit:'编', save:'保存', cancel:'取消',
+    addSrc:'+ 新增攻略', noSources:'暂无攻略，点右上角新增',
+    filterCity:'🔍 城市...', allCats:'所有分类', allStatus:'所有状态',
+    city:'城市', country:'国家', date:'日期', rating:'评分',
+    comment:'心得', tags:'标签', shop:'店名/地点',
+    category:'类别', amount:'金额', currency:'币别',
+    addDiary:'+ 写日记', diaryTitle:'旅行日记',
+    addExp:'+ 新增', expTitle:'花费记录',
+    yearTotal:'今年旅游总花费', monthly:'每月', byCity:'每城市',
+    guideStats:'攻略统计', fx:'汇率', commute:'通勤',
+    mapsInfo:'✓ 点查询直接开启 Google Maps，查看真实班次与票价',
+    saveResult:'已开启 Google Maps，可手动填入时间和费用',
+    transport:'路线查询', srcTitle:'标题/名称', srcType:'来源类型',
+    url:'来源 URL（选填）', status:'状态', personalNote:'个人备注',
+    templateTitle:'攻略模板', tBasic:'基本信息', tTransport:'交通',
+    tFood:'饮食推荐', tSights:'景点门票', tStay:'住宿',
+    tSecret:'个人秘笈', tTrust:'可信度评分',
+    nearestAirport:'最近机场', howToGet:'造访方式',
+    transportTips:'交通建议', mustEat:'必吃推荐', discount:'优惠呼视',
+    bestTime:'最佳空腹时间', ticketPrice:'门票价格', openHours:'开放时间',
+    queueTip:'排队建议', stayArea:'建议住宿区域', stayNote:'住宿注意事项',
+    myTips:'我的私房Tips', specialReminder:'特别提醒',
+    trustScore:'对此攻略的信任度', freeNote:'自由备注',
+    currency2:'币别',
+    fxTitle:'汇率换算', calcTitle:'即时换算',
+    fxFrom:'从', fxTo:'到', fxAmt:'金额',
+    pairEdit:'手动设定汇率', pairFrom:'币别 A', pairTo:'币别 B',
+    pairRate:'1 A = ? B', setPair:'设定', resetFx:'恢复默认',
+    fxNote:'⚠ 自定汇率仅本次使用',
+    settingsTitle:'偏好设置',
+    defCurrency:'默认币别', defLang:'默认语言',
+    themeNote:'更多设置功能开发中',
+    tripName:'旅程名称（选填）',
+    calTitle:'日历',
+    addPlan:'+ 新增旅游计划',
+    planName:'城市 / 旅程名称',
+    planStart:'出发日期',
+    planEnd:'结束日期',
+    planColor:'颜色标签',
+    noPlan:'暂无旅游计划，点右上角新增',
+    addTrip:'+ 新增行程',
+    tripFrom:'出发地',
+    tripTo:'目的地',
+    estTimePH:'4小时30分',
+    photo:'照片',
+    hours:'小时',
+    dateErrEnd:'结束日期不能早于开始日期',
+    mins:'分',
+    hours:'小時',
+    dateErrEnd:'結束日期不能早於開始日期',
+    mins:'分',
+    countries:'国家统计',
+    countriesTotal:'今年去了',
+    countriesUnit:'个国家',
+    monthlyCountries:'每月国家数',
+    countriesList:'去过的国家',
+    countries:'國家統計',
+    countriesTotal:'今年去了',
+    countriesUnit:'個國家',
+    monthlyCountries:'每月國家數',
+    countriesList:'去過的國家',
+    editTrip:'编辑行程',
+    notePlaceholder:'高铁、TGV、EasyJet...',
+    srcTypeLabels:['小红书','博客','YouTube','Google Maps','Tripadvisor','官方网站','IG','其他'],
+    editTrip:'編輯行程',
+    notePlaceholder:'高鐵、TGV、EasyJet...',
+    srcTypeLabels:['小紅書','部落格','YouTube','Google Maps','Tripadvisor','官方網站','IG','其他'],
+    urlLabel:'来源链接',
+    starLabels:['','差','普通','还可以','推荐','必去！'],
+    photoWarn:'⚠ 储存空间不足，部分照片未能保留（文字资料均已储存）',
+    noRecords:'暂无记录',
+    noData:'暂无资料',
+    customized:'● 已自定',
+    selectLang:'选择语言',
+    selectCurr:'选择币别',
+    allRates:'所有汇率',
+    currentRate:'目前',
+    prefTitle:'✦ 偏好',
+    guideTotal:'份攻略',
+    guideFilled:'已填写',
+    photoClick:'点击选择照片',
+    statusLabels:['未读', '已读', '已去过 ✓'],
+    expCatLabels:['住宿', '餐饮', '交通', '景点门票', '购物', '其他'],
+    guideCatLabels:['餐厅', '咖啡厅', '博物馆/展览', '住宿', '景点/打卡', '交通', '购物', '综合', '其他'],
+    appInfo1:'数据（含照片）自动存于浏览器，清除 cookies 才会消失',
+    appInfo2:'花费与日记可导出 CSV',
+    appInfo3:'交通功能连接 Google Maps（免费）',
+    clearData:'清除所有数据（重置 App）',
+    clearConfirm:'确定要清除所有数据吗？此操作无法撤销。',
+  },
+  'EN': {
+    tabs:['Calendar','Transport','Guide','Diary','Expenses','Stats','Settings'],
+    from:'From', to:'To', openMaps:'Open Google Maps',
+    saveLog:'Save Trip', tripLog:'Trip Log', estTime:'Est. Time',
+    cost:'Cost', note:'Note', del:'Del', edit:'Edit', save:'Save', cancel:'Cancel',
+    addSrc:'+ Add Guide', noSources:'No guides yet — add one top right',
+    filterCity:'🔍 City...', allCats:'All Categories', allStatus:'All Status',
+    city:'City', country:'Country', date:'Date', rating:'Rating',
+    comment:'Comment', tags:'Tags', shop:'Shop / Place',
+    category:'Category', amount:'Amount', currency:'Currency',
+    addDiary:'+ Write', diaryTitle:'Travel Diary',
+    addExp:'+ Add', expTitle:'Expenses',
+    yearTotal:"This Year's Travel Spend", monthly:'Monthly', byCity:'By City',
+    guideStats:'Guide Stats', fx:'Currency', commute:'Commute',
+    mapsInfo:'✓ Opens Google Maps — see real schedules & prices',
+    saveResult:'Google Maps opened — fill in time & cost manually',
+    transport:'Route Search', srcTitle:'Title / Name', srcType:'Source Type',
+    url:'Source URL (optional)', status:'Status', personalNote:'Personal Note',
+    templateTitle:'Guide Template', tBasic:'Basic Info', tTransport:'Transport',
+    tFood:'Food & Drinks', tSights:'Attractions', tStay:'Accommodation',
+    tSecret:'My Tips', tTrust:'Trust Rating',
+    nearestAirport:'Nearest Airport', howToGet:'How to Get There',
+    transportTips:'Transport Tips', mustEat:'Must Eat', discount:'Deals & Discounts',
+    bestTime:'Best Time to Visit', ticketPrice:'Ticket Price', openHours:'Opening Hours',
+    queueTip:'Queue Tips', stayArea:'Recommended Area', stayNote:'Accommodation Notes',
+    myTips:'My Secret Tips', specialReminder:'Special Reminders',
+    trustScore:'Trust Score', freeNote:'Free Notes',
+    currency2:'Currency',
+    fxTitle:'Currency', calcTitle:'Quick Convert',
+    fxFrom:'From', fxTo:'To', fxAmt:'Amount',
+    pairEdit:'Set Exchange Rate', pairFrom:'Currency A', pairTo:'Currency B',
+    pairRate:'1 A = ? B', setPair:'Set', resetFx:'Reset to Default',
+    fxNote:'⚠ Custom rates apply to this session only',
+    settingsTitle:'Preferences',
+    defCurrency:'Default Currency', defLang:'Default Language',
+    themeNote:'More settings coming soon',
+    tripName:'Trip Name (optional)',
+    calTitle:'Calendar',
+    addPlan:'+ Add Trip Plan',
+    planName:'City / Trip Name',
+    planStart:'Start Date',
+    planEnd:'End Date',
+    planColor:'Color Tag',
+    noPlan:'No plans yet — add one top right',
+    addTrip:'+ Add Journey',
+    tripFrom:'From',
+    tripTo:'To',
+    estTimePH:'4h 30m',
+    photo:'Photos',
+    hours:'h',
+    dateErrEnd:'La fine non può precedere l\'inizio',
+    dateErrEnd:'End date cannot be before start date',
+    mins:'m',
+    countries:'Countries',
+    countriesTotal:'Countries visited this year',
+    countriesUnit:'',
+    monthlyCountries:'Countries per month',
+    countriesList:'Countries visited',
+    editTrip:'Edit Trip',
+    notePlaceholder:'Train, Flight, Bus...',
+    srcTypeLabels:['Xiaohongshu','Blog','YouTube','Google Maps','Tripadvisor','Official Site','Instagram','Other'],
+    urlLabel:'Source Link',
+    starLabels:['','Poor','Okay','Good','Recommended','Must-go!'],
+    photoWarn:'⚠ Storage full — some photos not saved (text data preserved)',
+    noRecords:'No records yet',
+    noData:'No data yet',
+    customized:'● Custom',
+    selectLang:'Select Language',
+    selectCurr:'Select Currency',
+    allRates:'All Rates',
+    currentRate:'Current',
+    prefTitle:'✦ Preferences',
+    guideTotal:'guides',
+    guideFilled:'filled',
+    photoClick:'Tap to select photos',
+    statusLabels:['Unread', 'Read', 'Been there ✓'],
+    expCatLabels:['Accommodation', 'Food & Drink', 'Transport', 'Attractions', 'Shopping', 'Other'],
+    guideCatLabels:['Restaurant', 'Café', 'Museum/Exhibition', 'Accommodation', 'Attractions', 'Transport', 'Shopping', 'General', 'Other'],
+    appInfo1:'Data (incl. photos) saved in browser — cleared only if you clear cookies',
+    appInfo2:'Expenses & diary can be exported as CSV',
+    appInfo3:'Transport uses Google Maps (free)',
+    clearData:'Clear All Data (Reset App)',
+    clearConfirm:'Are you sure you want to clear all data? This cannot be undone.',
+  },
+  'IT': {
+    tabs:['Calendario','Trasporti','Guida','Diario','Spese','Stat.','Impost.'],
+    from:'Partenza', to:'Destinazione', openMaps:'Apri Google Maps',
+    saveLog:'Salva Viaggio', tripLog:'Registro', estTime:'Tempo stimato',
+    cost:'Costo', note:'Nota', del:'Elm', edit:'Mod', save:'Salva', cancel:'Annulla',
+    addSrc:'+ Aggiungi', noSources:'Nessuna guida — aggiungi in alto a destra',
+    filterCity:'🔍 Città...', allCats:'Tutte', allStatus:'Tutti gli stati',
+    city:'Città', country:'Paese', date:'Data', rating:'Voto',
+    comment:'Commento', tags:'Tag', shop:'Negozio/Luogo',
+    category:'Categoria', amount:'Importo', currency:'Valuta',
+    addDiary:'+ Scrivi', diaryTitle:'Diario',
+    addExp:'+ Aggiungi', expTitle:'Spese',
+    yearTotal:'Spese annuali viaggi', monthly:'Mensile', byCity:'Per città',
+    guideStats:'Guide', fx:'Valute', commute:'Tragitti',
+    mapsInfo:'✓ Apre Google Maps — orari e prezzi reali',
+    saveResult:'Google Maps aperto — inserisci tempo e costo',
+    transport:'Cerca percorso', srcTitle:'Titolo', srcType:'Tipo fonte',
+    url:'URL fonte (opzionale)', status:'Stato', personalNote:'Nota personale',
+    templateTitle:'Modello Guida', tBasic:'Info Base', tTransport:'Trasporti',
+    tFood:'Cibo & Bevande', tSights:'Attrazioni', tStay:'Alloggio',
+    tSecret:'Consigli Segreti', tTrust:'Affidabilità',
+    nearestAirport:'Aeroporto più vicino', howToGet:'Come arrivarci',
+    transportTips:'Consigli trasporti', mustEat:'Da mangiare assolutamente', discount:'Offerte',
+    bestTime:'Orario migliore', ticketPrice:'Prezzo biglietto', openHours:'Orari apertura',
+    queueTip:'Consigli fila', stayArea:'Zona consigliata', stayNote:'Note alloggio',
+    myTips:'I miei consigli segreti', specialReminder:'Promemoria speciali',
+    trustScore:'Affidabilità', freeNote:'Note libere',
+    currency2:'Valuta',
+    fxTitle:'Valute', calcTitle:'Conversione rapida',
+    fxFrom:'Da', fxTo:'A', fxAmt:'Importo',
+    pairEdit:'Imposta tasso di cambio', pairFrom:'Valuta A', pairTo:'Valuta B',
+    pairRate:'1 A = ? B', setPair:'Imposta', resetFx:'Ripristina',
+    fxNote:'⚠ Tassi personalizzati solo per questa sessione',
+    settingsTitle:'Preferenze',
+    defCurrency:'Valuta predefinita', defLang:'Lingua predefinita',
+    themeNote:'Altre impostazioni in arrivo',
+    tripName:'Nome viaggio (opzionale)',
+    calTitle:'Calendario',
+    addPlan:'+ Aggiungi piano',
+    planName:'Città / Nome viaggio',
+    planStart:'Data inizio',
+    planEnd:'Data fine',
+    planColor:'Colore',
+    noPlan:'Nessun piano — aggiungi in alto a destra',
+    addTrip:'+ Aggiungi tratta',
+    tripFrom:'Da',
+    tripTo:'A',
+    estTimePH:'4h 30min',
+    photo:'Foto',
+    hours:'h',
+    dateErrEnd:'La fine non può precedere l\'inizio',
+    dateErrEnd:'End date cannot be before start date',
+    mins:'min',
+    countries:'Paesi',
+    countriesTotal:'Paesi visitati quest\'anno',
+    countriesUnit:'',
+    monthlyCountries:'Paesi al mese',
+    countriesList:'Paesi visitati',
+    editTrip:'Modifica viaggio',
+    notePlaceholder:'Treno, Volo, Autobus...',
+    srcTypeLabels:['Xiaohongshu','Blog','YouTube','Google Maps','Tripadvisor','Sito ufficiale','Instagram','Altro'],
+    urlLabel:'Link fonte',
+    starLabels:['','Scarso','Ok','Buono','Consigliato','Da non perdere!'],
+    photoWarn:'⚠ Spazio insufficiente — alcune foto non salvate (testo conservato)',
+    noRecords:'Nessun record',
+    noData:'Nessun dato',
+    customized:'● Personalizzato',
+    selectLang:'Seleziona lingua',
+    selectCurr:'Seleziona valuta',
+    allRates:'Tutti i tassi',
+    currentRate:'Attuale',
+    prefTitle:'✦ Preferenze',
+    guideTotal:'guide',
+    guideFilled:'compilate',
+    photoClick:'Tocca per scegliere foto',
+    statusLabels:['Da leggere', 'Letto', 'Ci sono stato ✓'],
+    expCatLabels:['Alloggio', 'Cibo & Bevande', 'Trasporti', 'Attrazioni', 'Shopping', 'Altro'],
+    guideCatLabels:['Ristorante', 'Caffè', 'Museo/Mostra', 'Alloggio', 'Attrazioni', 'Trasporti', 'Shopping', 'Generale', 'Altro'],
+    appInfo1:'Dati (foto incluse) salvati nel browser — si cancellano solo svuotando i cookie',
+    appInfo2:'Spese e diario esportabili in CSV',
+    appInfo3:'Trasporti collegati a Google Maps (gratuito)',
+    clearData:'Cancella tutti i dati (Reset App)',
+    clearConfirm:'Sei sicuro di voler cancellare tutti i dati? Questa azione è irreversibile.',
+  },
+};
+
+// ── HELPERS ──
+function csvDl(rows, fn) {
+  if (!rows.length) return;
+  const h = Object.keys(rows[0]);
+  const body = rows.map(r => h.map(k => '"' + String(r[k]||'').replace(/"/g,'""') + '"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + h.join(',') + '\n' + body], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fn; a.click();
+}
+function readImg(file) {
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        res({url: canvas.toDataURL('image/jpeg', 0.7), name: file.name});
+      };
+      img.src = e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+// ── STYLE ──
+const G = {
+  bg:'#0f0d0a', bg2:'#141210', bg3:'#1a1710', bg4:'#0d0b08',
+  gold:'#d4a853', text:'#e8dcc8', sub:'#9a8968', dim:'#6b5f4a',
+  br:'#2a2418', br2:'#1e1b14', red:'#9b6a6a', green:'#7a9b6a',
+};
+const S = {
+  inp: {background:G.bg3, border:'1px solid '+G.br, color:G.text, padding:'10px 14px', fontFamily:"'Cormorant Garamond',serif", fontSize:15, borderRadius:2, width:'100%', outline:'none'},
+  ta:  {background:G.bg3, border:'1px solid '+G.br, color:G.text, padding:'10px 14px', fontFamily:"'Cormorant Garamond',serif", fontSize:14, borderRadius:2, width:'100%', resize:'vertical', outline:'none'},
+  gold:{background:G.gold, color:G.bg, border:'none', padding:'10px 18px', fontFamily:"'Cinzel',serif", letterSpacing:2, cursor:'pointer', borderRadius:2, fontSize:10},
+  out: {background:'transparent', color:G.gold, border:'1px solid '+G.gold, padding:'9px 14px', fontFamily:"'Cinzel',serif", letterSpacing:2, cursor:'pointer', borderRadius:2, fontSize:12},
+  gh:  {background:'transparent', color:G.dim, border:'1px solid '+G.br, padding:'7px 12px', fontFamily:"'Cinzel',serif", letterSpacing:1, cursor:'pointer', borderRadius:2, fontSize:12},
+  rd:  {background:'transparent', color:G.red, border:'1px solid rgba(155,106,106,.3)', padding:'6px 10px', fontFamily:"'Cinzel',serif", letterSpacing:1, cursor:'pointer', borderRadius:2, fontSize:10},
+  card:{border:'1px solid '+G.br2, borderRadius:4, padding:14, marginBottom:10, background:G.bg},
+};
+const CZ = {fontFamily:"'Cinzel',serif"};
+const chip = (on, clr) => ({...CZ, fontSize:13, letterSpacing:1, cursor:'pointer', padding:'5px 11px', borderRadius:2, whiteSpace:'nowrap', border:'1px solid '+(on?(clr||G.gold):'#3a3020'), background:on?(clr||G.gold)+'18':'transparent', color:on?(clr||G.gold):G.sub});
+const Lbl = ({t}) => <div style={{fontSize:12, color:G.dim, letterSpacing:1, ...CZ, marginBottom:6}}>{t}</div>;
+
+function DateInput({style, value, onChange, required}) {
+  const now = new Date();
+  const curY = value ? parseInt(value.slice(0,4)) : now.getFullYear();
+  const curM = value ? parseInt(value.slice(5,7)) : now.getMonth()+1;
+  const curD = value ? parseInt(value.slice(8,10)) : now.getDate();
+  const years = Array.from({length:10}, (_,i) => now.getFullYear()-2+i);
+  const months = Array.from({length:12}, (_,i) => i+1);
+  const daysInMonth = new Date(curY, curM, 0).getDate();
+  const days = Array.from({length:daysInMonth}, (_,i) => i+1);
+  const pad = n => String(n).padStart(2,'0');
+  const emit = (y,m,d) => onChange({target:{value: y+'-'+pad(m)+'-'+pad(d)}});
+  const borderColor = required && !value ? 'rgba(212,168,83,.4)' : undefined;
+  return (
+    <div style={{display:'grid', gridTemplateColumns:'2fr 1.5fr 1.5fr', gap:5}}>
+      <select style={{...style, borderColor, appearance:'none', fontSize:13, padding:'8px 10px'}}
+        value={curY} onChange={e=>emit(parseInt(e.target.value),curM,Math.min(curD,new Date(parseInt(e.target.value),curM,0).getDate()))}>
+        {years.map(y=><option key={y} value={y}>{y}</option>)}
+      </select>
+      <select style={{...style, borderColor, appearance:'none', fontSize:13, padding:'8px 10px'}}
+        value={curM} onChange={e=>emit(curY,parseInt(e.target.value),Math.min(curD,new Date(curY,parseInt(e.target.value),0).getDate()))}>
+        {months.map(m=><option key={m} value={m}>{pad(m)}</option>)}
+      </select>
+      <select style={{...style, borderColor, appearance:'none', fontSize:13, padding:'8px 10px'}}
+        value={curD} onChange={e=>emit(curY,curM,parseInt(e.target.value))}>
+        {days.map(d=><option key={d} value={d}>{pad(d)}</option>)}
+      </select>
+    </div>
+  );
+}
+const HR = () => <span style={{flex:1, height:1, background:G.br, display:'block'}}/>;
+const SecHead = ({t, children}) => (
+  <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:14}}>
+    <span style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>{t}</span><HR/>{children}
+  </div>
+);
+
+// ── MODAL ──
+function Modal({show, onClose, title, children}) {
+  if (!show) return null;
+  return (
+    <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,.93)', display:'flex', alignItems:'flex-end', zIndex:200, maxWidth:430, margin:'0 auto'}}>
+      <div style={{background:G.bg2, borderTop:'1px solid '+G.br, width:'100%', maxHeight:'90vh', overflowY:'auto', padding:20, borderRadius:'10px 10px 0 0'}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:18}}>
+          <div style={{...CZ, fontSize:11, letterSpacing:3, color:G.gold}}>{title}</div>
+          <button onClick={onClose} style={{background:'none', border:'none', color:G.dim, fontSize:22, cursor:'pointer'}}>✕</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── PHOTOS ──
+function Photos({photos, set, T}) {
+  const ref = useRef();
+  const add = async e => {
+    const r = await Promise.all(Array.from(e.target.files).map(readImg));
+    set(p => [...p, ...r]);
+  };
+  return (
+    <div style={{marginBottom:14}}>
+      <Lbl t={"📷 " + (T ? T.photo : "照片")}/>
+      <input ref={ref} type="file" multiple accept="image/*" style={{display:'none'}} onChange={add}/>
+      <div onClick={() => ref.current.click()} style={{border:'1px dashed '+G.br, borderRadius:4, padding:photos.length?8:16, cursor:'pointer', background:G.bg4}}>
+        {photos.length === 0
+          ? <div style={{color:G.dim, fontSize:13, textAlign:'center'}}>{T ? T.photoClick : '點擊選擇照片'}</div>
+          : <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+              {photos.map((ph,i) => (
+                <div key={i} style={{position:'relative'}}>
+                  <img src={ph.url} alt="" style={{width:70, height:70, objectFit:'cover', borderRadius:2, border:'1px solid '+G.br2}}/>
+                  <button onClick={e => {e.stopPropagation(); set(p => p.filter((_,j) => j!==i));}} style={{position:'absolute', top:-5, right:-5, background:G.red, border:'none', borderRadius:'50%', width:16, height:16, cursor:'pointer', color:'#fff', fontSize:9, display:'flex', alignItems:'center', justifyContent:'center', padding:0}}>✕</button>
+                </div>
+              ))}
+              <div style={{width:70, height:70, border:'1px dashed '+G.br, borderRadius:2, display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, color:'#4a4030'}}>+</div>
+            </div>
+        }
+      </div>
+    </div>
+  );
+}
+
+// ── BAR CHART ──
+function Bar({labels, vals, clr, unit, noData}) {
+  const ref = useRef();
+  useEffect(() => {
+    if (!ref.current || !labels.length) return;
+    const ex = Chart.getChart(ref.current); if (ex) ex.destroy();
+    new Chart(ref.current, {
+      type:'bar',
+      data:{labels, datasets:[{data:vals, backgroundColor:clr+'99', borderColor:clr, borderWidth:1, borderRadius:3}]},
+      options:{responsive:true, plugins:{legend:{display:false}, tooltip:{callbacks:{label:c => (unit||'') + c.parsed.y.toFixed(0)}}}, scales:{x:{ticks:{color:G.dim, font:{size:10}}, grid:{color:G.br2}}, y:{ticks:{color:G.dim, font:{size:10}, callback:v=>(unit||'')+v}, grid:{color:G.br2}, beginAtZero:true}}}
+    });
+  }, [labels.join(','), vals.join(',')]);
+  if (!labels.length) return <div style={{textAlign:'center', padding:'20px 0', color:'#3a3020', fontSize:12, fontStyle:'italic'}}>{noData||'—'}</div>;
+  return <canvas ref={ref} style={{maxHeight:200}}/>;
+}
+
+// ── STARS ──
+function Stars({v, on, labels}) {
+  return (
+    <div style={{display:'flex', gap:4, alignItems:'center'}}>
+      {[1,2,3,4,5].map(s => (
+        <button key={s} onClick={() => on && on(s)} style={{background:'none', border:'none', cursor:on?'pointer':'default', fontSize:20, color:s<=v?G.gold:'#3a3020', padding:0}}>★</button>
+      ))}
+      {labels && v > 0 && <span style={{fontSize:11, color:G.gold, marginLeft:4}}>{labels[v]}</span>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// GUIDE TAB — structured template
+// ══════════════════════════════════════════════
+const EMPTY_TMPL = {
+  // basic
+  city:'', srcType:'小紅書', url:'', cat:'', status:'未讀', title:'',
+  // transport
+  nearestAirport:'', howToGet:'', transportTips:'',
+  // food
+  mustEat:'', discount:'', bestFoodTime:'',
+  // sights
+  ticketPrice:'', openHours:'', queueTip:'',
+  // stay
+  stayArea:'', stayNote:'',
+  // secret
+  myTips:'', specialReminder:'',
+  // trust
+  trust:0,
+  // free
+  freeNote:'',
+  // meta
+  expanded:false,
+};
+
+function TmplField({label, value, onChange, multiline, placeholder}) {
+  if (multiline) {
+    return (
+      <div style={{marginBottom:10}}>
+        <Lbl t={label}/>
+        <textarea
+          style={{...S.ta, minHeight:64, fontSize:14}}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder||''}
+        />
+      </div>
+    );
+  }
+  return (
+    <div style={{marginBottom:10}}>
+      <Lbl t={label}/>
+      <input style={{...S.inp, fontSize:14}} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder||''}/>
+    </div>
+  );
+}
+
+function TmplSection({icon, title, children}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div style={{marginBottom:4}}>
+      <button onClick={() => setOpen(o=>!o)} style={{width:'100%', background:'transparent', border:'none', cursor:'pointer', padding:'8px 0', display:'flex', alignItems:'center', gap:8}}>
+        <span style={{fontSize:13}}>{icon}</span>
+        <span style={{...CZ, fontSize:12, letterSpacing:1, color:G.dim}}>{title}</span>
+        <HR/>
+        <span style={{color:G.dim, fontSize:12}}>{open?'▲':'▼'}</span>
+      </button>
+      {open && <div style={{paddingLeft:4}}>{children}</div>}
+    </div>
+  );
+}
+
+function GuideTab({T}) {
+  const initData = [];
+
+  const [srcs, setSrcs] = useStorage('guideSrcs', []);
+  const [cityF, setCityF] = useState('');
+  const [catF, setCatF] = useState('');
+  const [stF, setStF] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState(null);
+  const [form, setForm] = useState({...EMPTY_TMPL});
+
+  const toggle = id => setSrcs(ss => ss.map(s => s.id===id ? {...s, expanded:!s.expanded} : s));
+  const setField = (id, key, val) => setSrcs(ss => ss.map(s => s.id===id ? {...s, [key]:val} : s));
+
+  const openEdit = src => {
+    setForm({...src});
+    setEditId(src.id);
+    setShowForm(true);
+  };
+  const openNew = () => {
+    setForm({...EMPTY_TMPL});
+    setEditId(null);
+    setShowForm(true);
+  };
+  const submit = () => {
+    if (!form.city) return;
+    if (editId) {
+      setSrcs(ss => ss.map(s => s.id===editId ? {...form, id:editId, expanded:s.expanded} : s));
+    } else {
+      setSrcs(ss => [{...form, id:Date.now(), expanded:true}, ...ss]);
+    }
+    setEditId(null);
+    setShowForm(false);
+  };
+
+  const filtered = srcs.filter(s =>
+    (!cityF || s.city.toLowerCase().includes(cityF.toLowerCase())) &&
+    (!catF || s.cat===catF) &&
+    (!stF || s.status===stF)
+  );
+  const cities = [...new Set(filtered.map(s => s.city))];
+  const total = srcs.length;
+
+  const hasContent = s => [s.nearestAirport, s.howToGet, s.mustEat, s.ticketPrice, s.stayArea, s.myTips].some(v=>v&&v.trim());
+
+  return (
+    <div style={{padding:18}}>
+      <div style={{display:'flex', gap:8, marginBottom:14, alignItems:'center'}}>
+        <div style={{fontSize:13, color:G.dim, padding:'6px 12px', background:G.bg4, border:'1px solid '+G.br, borderRadius:3}}>
+          <span style={{color:G.gold}}>{total}</span> {T.guideTotal} · {T.guideFilled} <span style={{color:G.green}}>{srcs.filter(hasContent).length}</span>
+        </div>
+        <button style={{...S.gold, padding:'7px 14px', fontSize:11, marginLeft:'auto'}} onClick={openNew}>{T.addSrc}</button>
+      </div>
+
+      <div style={{display:'flex', gap:6, marginBottom:14, flexWrap:'wrap'}}>
+        <input style={{...S.inp, fontSize:12, flex:1, minWidth:80}} placeholder={T.filterCity} value={cityF} onChange={e=>setCityF(e.target.value)}/>
+        <select style={{...S.inp, fontSize:12, appearance:'none', width:'auto', minWidth:90}} value={catF} onChange={e=>setCatF(e.target.value)}>
+          <option value="">{T.allCats}</option>
+          {GUIDE_CATS.map((c,i) => <option key={c} value={c}>{T.guideCatLabels ? T.guideCatLabels[i] : c}</option>)}
+        </select>
+        <select style={{...S.inp, fontSize:12, appearance:'none', width:'auto', minWidth:80}} value={stF} onChange={e=>setStF(e.target.value)}>
+          <option value="">{T.allStatus}</option>
+          {STATUS.map((s,i) => <option key={s} value={s}>{T.statusLabels ? T.statusLabels[i] : s}</option>)}
+        </select>
+      </div>
+
+      {cities.length===0 && (
+        <div style={{textAlign:'center', padding:'40px 0', color:'#3a3020', fontStyle:'italic', fontSize:13}}>{T.noSources}</div>
+      )}
+
+      {cities.map(city => (
+        <div key={city} style={{marginBottom:20}}>
+          <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.gold, marginBottom:8, display:'flex', alignItems:'center', gap:8}}>
+            <span>{city}</span><HR/>
+            <span style={{color:G.dim, letterSpacing:1}}>{filtered.filter(s=>s.city===city).length}</span>
+          </div>
+
+          {filtered.filter(s => s.city===city).map(s => (
+            <div key={s.id} style={{...S.card, padding:0, overflow:'hidden'}}>
+
+              {/* CARD HEADER */}
+              <div style={{padding:'12px 14px', cursor:'pointer'}} onClick={() => toggle(s.id)}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:8}}>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{display:'flex', alignItems:'center', gap:5, marginBottom:5, flexWrap:'wrap'}}>
+                      {s.srcType && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(SRC_CLR[s.srcType]||G.dim)+'25', color:SRC_CLR[s.srcType]||G.sub, border:'1px solid '+(SRC_CLR[s.srcType]||G.br)+'44'}}>{T.srcTypeLabels ? T.srcTypeLabels[SRC_TYPES.indexOf(s.srcType)] : s.srcType}</span>}
+                      {s.cat && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(GUIDE_CLR[s.cat]||G.dim)+'20', color:GUIDE_CLR[s.cat]||G.sub, border:'1px solid '+(GUIDE_CLR[s.cat]||G.br)+'44'}}>{T.guideCatLabels ? T.guideCatLabels[GUIDE_CATS.indexOf(s.cat)] : s.cat}</span>}
+                      <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, color:SCLR[s.status]||G.dim, border:'1px solid '+(SCLR[s.status]||G.br)+'55'}}>{T.statusLabels ? T.statusLabels[STATUS.indexOf(s.status)] : s.status}</span>
+                      {s.trust>0 && <span style={{fontSize:12, color:G.gold}}>{'★'.repeat(s.trust)}</span>}
+                    </div>
+                    <div style={{fontSize:15, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.title||'（未命名）'}</div>
+                    {s.url && <div style={{fontSize:12, color:G.dim, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{s.url}</div>}
+                  </div>
+                  <div style={{display:'flex', gap:4, flexShrink:0}}>
+                    <button onClick={e=>{e.stopPropagation();openEdit(s);}} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                    <button onClick={e=>{e.stopPropagation();setSrcs(ss=>ss.filter(x=>x.id!==s.id));}} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
+                  </div>
+                </div>
+                <div style={{textAlign:'center', color:'#3a3020', fontSize:13, marginTop:3}}>{s.expanded?'▲':'▼'}</div>
+              </div>
+
+              {/* EXPANDED TEMPLATE */}
+              {s.expanded && (
+                <div style={{borderTop:'1px solid '+G.br2, padding:'14px 14px 8px'}}>
+
+                  {/* Status quick change */}
+                  <div style={{marginBottom:14}}>
+                    <Lbl t={T.status}/>
+                    <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+                      {STATUS.map((st,i) => (
+                        <button key={st} onClick={() => setField(s.id,'status',st)} style={chip(s.status===st, SCLR[st])}>{T.statusLabels ? T.statusLabels[i] : st}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Transport */}
+                  <TmplSection icon="✈️" title={T.tTransport}>
+                    <TmplField label={T.nearestAirport} value={s.nearestAirport} onChange={v=>setField(s.id,'nearestAirport',v)} placeholder="PEK, CDG, FCO..."/>
+                    <TmplField label={T.howToGet} value={s.howToGet} onChange={v=>setField(s.id,'howToGet',v)} multiline placeholder="交通方式、費用、時間..."/>
+                    <TmplField label={T.transportTips} value={s.transportTips} onChange={v=>setField(s.id,'transportTips',v)} multiline placeholder="當地交通App、注意事項..."/>
+                  </TmplSection>
+
+                  {/* Food */}
+                  <TmplSection icon="🍜" title={T.tFood}>
+                    <TmplField label={T.mustEat} value={s.mustEat} onChange={v=>setField(s.id,'mustEat',v)} multiline placeholder="必吃的餐廳、小吃、特色料理..."/>
+                    <TmplField label={T.discount} value={s.discount} onChange={v=>setField(s.id,'discount',v)} placeholder="學生優惠、App折扣、免費時段..."/>
+                    <TmplField label={T.bestTime} value={s.bestFoodTime} onChange={v=>setField(s.id,'bestFoodTime',v)} placeholder="避開尖峰時段建議..."/>
+                  </TmplSection>
+
+                  {/* Sights */}
+                  <TmplSection icon="🏛️" title={T.tSights}>
+                    <TmplField label={T.ticketPrice} value={s.ticketPrice} onChange={v=>setField(s.id,'ticketPrice',v)} placeholder="¥60 / €15 / 免費..."/>
+                    <TmplField label={T.openHours} value={s.openHours} onChange={v=>setField(s.id,'openHours',v)} placeholder="9:00-17:00，週一閉館..."/>
+                    <TmplField label={T.queueTip} value={s.queueTip} onChange={v=>setField(s.id,'queueTip',v)} multiline placeholder="預約方式、最佳入場時間..."/>
+                  </TmplSection>
+
+                  {/* Stay */}
+                  <TmplSection icon="🏨" title={T.tStay}>
+                    <TmplField label={T.stayArea} value={s.stayArea} onChange={v=>setField(s.id,'stayArea',v)} placeholder="建議住的區域及理由..."/>
+                    <TmplField label={T.stayNote} value={s.stayNote} onChange={v=>setField(s.id,'stayNote',v)} multiline placeholder="訂房注意、旺季提醒..."/>
+                  </TmplSection>
+
+                  {/* Secret Tips */}
+                  <TmplSection icon="💡" title={T.tSecret}>
+                    <TmplField label={T.myTips} value={s.myTips} onChange={v=>setField(s.id,'myTips',v)} multiline placeholder="私房景點、當地人才知道的..."/>
+                    <TmplField label={T.specialReminder} value={s.specialReminder} onChange={v=>setField(s.id,'specialReminder',v)} multiline placeholder="特別注意事項、踩雷預防..."/>
+                  </TmplSection>
+
+                  {/* Trust + Free note */}
+                  <TmplSection icon="⭐" title={T.tTrust}>
+                    <div style={{marginBottom:10}}>
+                      <Lbl t={T.trustScore}/>
+                      <Stars v={s.trust} on={v=>setField(s.id,'trust',v)} labels={T.starLabels}/>
+                    </div>
+                    <TmplField label={T.freeNote} value={s.freeNote} onChange={v=>setField(s.id,'freeNote',v)} multiline placeholder="其他想記錄的..."/>
+                  </TmplSection>
+
+                  {s.url && (
+                    <div style={{marginTop:8, marginBottom:8}}>
+                      <a href={s.url} target="_blank" rel="noopener noreferrer" style={{fontSize:12, color:G.gold, textDecoration:'none', borderBottom:'1px solid rgba(212,168,83,.3)'}}>
+                        🔗 {T.urlLabel} → {s.url}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+
+      {/* ADD / EDIT FORM */}
+      <Modal show={showForm} onClose={() => setShowForm(false)} title={editId ? T.edit : T.addSrc}>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
+          <div><Lbl t={T.city}/><input style={S.inp} placeholder="北京, Roma..." value={form.city} onChange={e=>setForm(p=>({...p,city:e.target.value}))}/></div>
+          <div>
+            <Lbl t={T.category}/>
+            <select style={{...S.inp, appearance:'none'}} value={form.cat} onChange={e=>setForm(p=>({...p,cat:e.target.value}))}>
+              <option value="">{T.allCats}</option>
+              {GUIDE_CATS.map((c,i) => <option key={c} value={c}>{T.guideCatLabels ? T.guideCatLabels[i] : c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{marginBottom:10}}><Lbl t={T.srcTitle}/><input style={S.inp} placeholder="如：北京五天四夜深度遊..." value={form.title} onChange={e=>setForm(p=>({...p,title:e.target.value}))}/></div>
+        <div style={{marginBottom:10}}>
+          <Lbl t={T.srcType}/>
+          <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+            {SRC_TYPES.map((t,i) => <button key={t} onClick={() => setForm(p=>({...p,srcType:t}))} style={chip(form.srcType===t, SRC_CLR[t])}>{T.srcTypeLabels ? T.srcTypeLabels[i] : t}</button>)}
+          </div>
+        </div>
+        <div style={{marginBottom:10}}><Lbl t={T.url}/><input style={S.inp} placeholder="https://..." value={form.url} onChange={e=>setForm(p=>({...p,url:e.target.value}))}/></div>
+        <div style={{marginBottom:14}}>
+          <Lbl t={T.status}/>
+          <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
+            {STATUS.map((st,i) => <button key={st} onClick={() => setForm(p=>({...p,status:st}))} style={chip(form.status===st, SCLR[st])}>{T.statusLabels ? T.statusLabels[i] : st}</button>)}
+          </div>
+        </div>
+        <div style={{display:'flex', gap:10}}>
+          <button style={{...S.gh, flex:1}} onClick={() => setShowForm(false)}>{T.cancel}</button>
+          <button style={{...S.gold, flex:2}} onClick={submit}>{T.save}</button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// FX PANEL — any-pair rate editing
+// ══════════════════════════════════════════════
+function FXPanel({T}) {
+  // Store rates as a matrix: rates[A][B] = how many B per 1 A
+  // We derive this from BASE_FX: rate(A->B) = BASE_FX[A] / BASE_FX[B]
+  // User can override any pair directly
+  const [overrides, setOverrides] = useState({});
+  const [baseCurr, setBaseCurr] = useState('USD $');  // { 'CNY ¥->EUR €': 0.128, ... }
+  const [fc, setFc] = useState('CNY ¥');
+  const [tc, setTc] = useState('EUR €');
+  const [amt, setAmt] = useState('100');
+  // pair edit state
+  const [pA, setPA] = useState('EUR €');
+  const [pB, setPB] = useState('CNY ¥');
+  const [pVal, setPVal] = useState('');
+  const sym = c => c.split(' ')[1] || '';
+
+  const getRate = (from, to) => {
+    if (from === to) return 1;
+    const key = from + '->' + to;
+    const rkey = to + '->' + from;
+    if (overrides[key] !== undefined) return overrides[key];
+    if (overrides[rkey] !== undefined) return 1 / overrides[rkey];
+    return BASE_FX[from] / BASE_FX[to];
+  };
+
+  const setPair = () => {
+    const n = parseFloat(pVal);
+    if (isNaN(n) || n <= 0) return;
+    const key = pA + '->' + pB;
+    setOverrides(o => ({...o, [key]: n}));
+    setPVal('');
+  };
+
+  const resetAll = () => setOverrides({});
+
+  const result = (parseFloat(amt)||0) * getRate(fc, tc);
+
+
+
+  return (
+    <div>
+      {/* Quick converter */}
+      <div style={{...S.card, marginBottom:14}}>
+        <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim, marginBottom:12}}>{T.calcTitle}</div>
+        <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:8, alignItems:'center', marginBottom:12}}>
+          <div>
+            <Lbl t={T.fxFrom}/>
+            <select style={{...S.inp, appearance:'none', fontSize:13}} value={fc} onChange={e=>setFc(e.target.value)}>
+              {CURR.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{color:G.gold, fontSize:18, marginTop:16, textAlign:'center'}}>⇄</div>
+          <div>
+            <Lbl t={T.fxTo}/>
+            <select style={{...S.inp, appearance:'none', fontSize:13}} value={tc} onChange={e=>setTc(e.target.value)}>
+              {CURR.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, alignItems:'flex-end'}}>
+          <div><Lbl t={T.fxAmt}/><input style={{...S.inp, fontSize:16}} type="number" value={amt} onChange={e=>setAmt(e.target.value)} placeholder="100"/></div>
+          <div>
+            <div style={{fontSize:28, fontWeight:300, color:G.gold}}>{sym(tc)}{result.toFixed(2)}</div>
+            <div style={{fontSize:12, color:G.dim}}>{tc.split(' ')[0]}</div>
+          </div>
+        </div>
+        <div style={{marginTop:8, fontSize:13, color:G.dim}}>1 {sym(fc)} = {sym(tc)}{getRate(fc,tc).toFixed(4)}{Object.keys(overrides).length > 0 && <span style={{color:G.gold, marginLeft:6}}>{T.customized}</span>}</div>
+      </div>
+
+      {/* Pair editor */}
+      <div style={{...S.card, marginBottom:14}}>
+        <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim, marginBottom:12}}>{T.pairEdit}</div>
+        <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:8, alignItems:'flex-end', marginBottom:10}}>
+          <div>
+            <Lbl t={T.pairFrom}/>
+            <select style={{...S.inp, appearance:'none', fontSize:13}} value={pA} onChange={e=>setPA(e.target.value)}>
+              {CURR.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{color:G.dim, fontSize:14, marginBottom:12, textAlign:'center'}}>→</div>
+          <div>
+            <Lbl t={T.pairTo}/>
+            <select style={{...S.inp, appearance:'none', fontSize:13}} value={pB} onChange={e=>setPB(e.target.value)}>
+              {CURR.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{display:'flex', gap:8, alignItems:'flex-end', marginBottom:10}}>
+          <div style={{flex:1}}>
+            <Lbl t={'1 ' + sym(pA) + ' = ? ' + sym(pB)}/>
+            <input style={{...S.inp, fontSize:15}} type="number" placeholder={getRate(pA,pB).toFixed(4)} value={pVal} onChange={e=>setPVal(e.target.value)} onKeyDown={e=>e.key==='Enter'&&setPair()}/>
+          </div>
+          <button style={{...S.gold, padding:'10px 16px', flexShrink:0}} onClick={setPair}>{T.setPair}</button>
+        </div>
+        <div style={{fontSize:13, color:G.dim, marginBottom:pA!==pB?8:0}}>
+          {pA!==pB && T.currentRate + ': 1 ' + sym(pA) + ' = ' + sym(pB) + getRate(pA,pB).toFixed(4)}
+        </div>
+      </div>
+
+      {/* Rate table — base currency selector */}
+      <div style={{marginBottom:10}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
+          <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>{T.allRates}</div>
+          <div style={{display:'flex', gap:6, alignItems:'center'}}>
+            {Object.keys(overrides).length > 0 && (
+              <button style={{...S.gh, fontSize:11, padding:'5px 9px'}} onClick={resetAll}>{T.resetFx}</button>
+            )}
+          </div>
+        </div>
+        <div style={{display:'flex', gap:5, flexWrap:'wrap', marginBottom:12}}>
+          {CURR.map(c => (
+            <button key={c} onClick={() => setBaseCurr(c)} style={{...CZ, fontSize:12, letterSpacing:1, cursor:'pointer', padding:'5px 11px', borderRadius:2, border:'1px solid '+(baseCurr===c?G.gold:'#3a3020'), background:baseCurr===c?G.gold+'18':'transparent', color:baseCurr===c?G.gold:G.sub}}>
+              {sym(c)}
+            </button>
+          ))}
+        </div>
+        {CURR.filter(c => c !== baseCurr).map(b => {
+          const key = baseCurr+'->'+b;
+          const rkey = b+'->'+baseCurr;
+          const isCustom = overrides[key] !== undefined || overrides[rkey] !== undefined;
+          return (
+            <div key={b} style={{display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', borderBottom:'1px solid '+G.br2, fontSize:14}}>
+              <span style={{color:G.sub}}>1 {sym(baseCurr)}</span>
+              <span style={{color:isCustom?G.gold:G.text}}>
+                {isCustom && <span style={{fontSize:9, color:G.gold, marginRight:4}}>●</span>}
+                {sym(b)}{getRate(baseCurr,b).toFixed(4)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{padding:'10px 12px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:13, color:G.dim, lineHeight:1.6}}>
+        {T.fxNote}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// SETTINGS TAB — preferences only
+// ══════════════════════════════════════════════
+function SettingsTab({T, lang, setLang, defCurr, setDefCurr, tripName, setTripName}) {
+  return (
+    <div style={{padding:18}}>
+      <div style={{...CZ, fontSize:11, letterSpacing:3, color:G.dim, marginBottom:20}}>⚙ {T.settingsTitle.toUpperCase()}</div>
+
+      <div style={{...S.card, marginBottom:14}}>
+        <div style={{...CZ, fontSize:12, letterSpacing:2, color:G.gold, marginBottom:14}}>{T.prefTitle}</div>
+
+        <div style={{marginBottom:14}}>
+          <Lbl t={T.defLang}/>
+          <select style={{...S.inp, appearance:'none', fontSize:14}} value={lang} onChange={e=>setLang(e.target.value)}>
+            {[['繁中','繁體中文'],['简中','简体中文'],['EN','English'],['IT','Italiano']].map(([v,l]) => (
+              <option key={v} value={v}>{l}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <Lbl t={T.defCurrency}/>
+          <select style={{...S.inp, appearance:'none', fontSize:14}} value={defCurr} onChange={e=>setDefCurr(e.target.value)}>
+            {CURR.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{marginBottom:4}}>
+          <Lbl t={T.tripName}/>
+          <input style={S.inp} placeholder="2025 歐洲之旅、北京出差..." value={tripName} onChange={e=>setTripName(e.target.value)}/>
+        </div>
+      </div>
+
+      <div style={{padding:'14px', background:'rgba(212,168,83,.04)', border:'1px solid '+G.br, borderRadius:4, fontSize:13, color:G.dim, lineHeight:1.9}}>
+        ✦ VIAGGIO v2.0<br/>
+        📱 {T.appInfo1}<br/>
+        📤 {T.appInfo2}<br/>
+        🗺 {T.appInfo3}<br/>
+        <span style={{color:G.dim, fontSize:11}}>{T.themeNote}</span>
+      </div>
+
+      <div style={{marginTop:14}}>
+        <button
+          style={{...S.rd, width:'100%', fontSize:12, padding:'11px'}}
+          onClick={() => {
+            if (window.confirm(T.clearConfirm)) {
+              ['commutes','entries','exps','lang','defCurr','tripName','guideSrcs'].forEach(k => {
+                try { localStorage.removeItem('vg_' + k); } catch(e) {}
+              });
+              window.location.reload();
+            }
+          }}
+        >
+          {T.clearData}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── LOCAL STORAGE PERSISTENCE ──
+function trySave(key, val) {
+  try {
+    localStorage.setItem('vg_' + key, JSON.stringify(val));
+  } catch(e) {
+    try {
+      const safe = Array.isArray(val)
+        ? val.map(item => item && typeof item === 'object' && 'photos' in item ? {...item, photos:[]} : item)
+        : val;
+      localStorage.setItem('vg_' + key, JSON.stringify(safe));
+      localStorage.setItem('vg_photoWarn', '1');
+    } catch(e2) {}
+  }
+}
+
+function useStorage(key, init) {
+  const [val, setVal] = useState(() => {
+    try {
+      const stored = localStorage.getItem('vg_' + key);
+      return stored ? JSON.parse(stored) : init;
+    } catch(e) { return init; }
+  });
+  const set = v => { setVal(v); trySave(key, v); };
+  const setFn = fn => {
+    setVal(prev => {
+      const next = fn(prev);
+      trySave(key, next);
+      return next;
+    });
+  };
+  return [val, (v) => typeof v === 'function' ? setFn(v) : set(v)];
+}
+
+
+// ══════════════════════════════════════════════
+// CALENDAR TAB
+// ══════════════════════════════════════════════
+const PLAN_COLORS = ['#d4a853','#7a9b6a','#6a7a9b','#9b7a8a','#9b8a6a','#7a8a9b','#c0504d','#8b7a9b'];
+
+function CalendarTab({T, plans, setPlans, commutes, entries, exps}) {
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId]     = useState(null);
+  const [form, setForm]         = useState({name:'', start:'', end:'', color:PLAN_COLORS[0]});
+  const [viewYear, setViewYear] = useState(new Date().getFullYear());
+  const [viewMonth, setViewMonth] = useState(new Date().getMonth()); // 0-indexed
+
+  const [dateErr, setDateErr] = useState('');
+  const submit = () => {
+    if (!form.name || !form.start) return;
+    if (form.end && form.end < form.start) { setDateErr(T.dateErrEnd||'結束日期不能早於開始日期'); return; }
+    setDateErr('');
+    if (editId) {
+      setPlans(ps => ps.map(p => p.id===editId ? {...form, id:editId} : p));
+    } else {
+      setPlans(ps => [{...form, id:Date.now()}, ...ps]);
+    }
+    setForm({name:'', start:'', end:'', color:PLAN_COLORS[0]});
+    setEditId(null); setShowForm(false);
+  };
+
+  const openEdit = p => { setForm({name:p.name,start:p.start,end:p.end,color:p.color}); setEditId(p.id); setShowForm(true); };
+
+  // Build calendar grid for viewYear/viewMonth
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const today = new Date();
+
+  const toISO = d => {
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+dd;
+  };
+
+  const dateStr = (y,m,d) => y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+
+  // Get plans active on a given date
+  const plansForDate = ds => plans.filter(p => {
+    if (!p.start) return false;
+    const end = p.end || p.start;
+    return ds >= p.start && ds <= end;
+  });
+
+  // Get events on a date
+  const eventsForDate = ds => {
+    const c = commutes.filter(x => x.date === ds);
+    const e = entries.filter(x => x.date === ds);
+    const x = exps.filter(ex => ex.date === ds);
+    return {commutes:c, entries:e, exps:x};
+  };
+
+  const prevMonth = () => { if (viewMonth===0){setViewYear(y=>y-1);setViewMonth(11);}else setViewMonth(m=>m-1); };
+  const nextMonth = () => { if (viewMonth===11){setViewYear(y=>y+1);setViewMonth(0);}else setViewMonth(m=>m+1); };
+
+  const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAY_NAMES   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  // Selected date detail
+  const [navEditing, setNavEditing] = useState(false);
+  const [navInput, setNavInput] = useState('');
+  const [selDate, setSelDate] = useState(null);
+  const selEvents = selDate ? eventsForDate(selDate) : null;
+  const selPlans  = selDate ? plansForDate(selDate) : [];
+
+  return (
+    <div style={{padding:18}}>
+      {/* Header */}
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16}}>
+        <div style={{fontSize:17, fontStyle:'italic'}}>{T.calTitle}</div>
+        <button style={{...S.gold, fontSize:11, padding:'7px 14px'}} onClick={() => {setForm({name:'',start:'',end:'',color:PLAN_COLORS[0]});setEditId(null);setShowForm(true);}}>{T.addPlan}</button>
+      </div>
+
+      {/* Plan strips */}
+      {plans.length > 0 && (
+        <div style={{marginBottom:14}}>
+          {plans.map(p => (
+            <div key={p.id} style={{display:'flex', alignItems:'center', gap:8, padding:'8px 12px', marginBottom:6, borderRadius:4, background:p.color+'15', border:'1px solid '+p.color+'44'}}>
+              <div style={{width:10, height:10, borderRadius:'50%', background:p.color, flexShrink:0}}/>
+              <div style={{flex:1, minWidth:0}}>
+                <div style={{fontSize:14, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.name}</div>
+                <div style={{fontSize:11, color:G.dim}}>{p.start&&p.start.replace(/-/g,'/')}{p.end&&p.end!==p.start?' → '+p.end.replace(/-/g,'/'):''}</div>
+              </div>
+              <button onClick={() => openEdit(p)} style={{...S.gh, padding:'4px 8px', fontSize:11}}>{T.edit}</button>
+              <button onClick={() => setPlans(ps => ps.filter(x=>x.id!==p.id))} style={{...S.rd, padding:'4px 8px', fontSize:11}}>{T.del}</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {plans.length === 0 && (
+        <div style={{textAlign:'center', padding:'16px 0 8px', color:'#3a3020', fontStyle:'italic', fontSize:13, marginBottom:8}}>{T.noPlan}</div>
+      )}
+
+      {/* Month navigator */}
+      <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:10}}> 
+        <button onClick={prevMonth} style={{...S.gh, padding:'6px 12px', fontSize:14, flexShrink:0}}>‹</button>
+        {navEditing ? (
+          <div style={{flex:1, display:'flex', gap:5}}>
+            <input
+              autoFocus
+              style={{...S.inp, flex:1, fontSize:13, textAlign:'center', padding:'7px 10px'}}
+              placeholder="2026/03"
+              value={navInput}
+              onChange={e => setNavInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key==='Enter') {
+                  const m = navInput.trim().match(/^(\d{4})\D?(\d{1,2})$/);
+                  if (m) { setViewYear(parseInt(m[1])); setViewMonth(parseInt(m[2])-1); }
+                  setNavEditing(false);
+                }
+                if (e.key==='Escape') setNavEditing(false);
+              }}
+              onBlur={() => setNavEditing(false)}
+            />
+            <button style={{...S.gold, padding:'7px 12px', fontSize:11}} onMouseDown={e => {
+              e.preventDefault();
+              const m = navInput.trim().match(/^(\d{4})\D?(\d{1,2})$/);
+              if (m) { setViewYear(parseInt(m[1])); setViewMonth(parseInt(m[2])-1); }
+              setNavEditing(false);
+            }}>Go</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setNavInput(''); setNavEditing(true); }}
+            style={{flex:1, background:'transparent', border:'none', cursor:'pointer', ...CZ, fontSize:13, letterSpacing:3, color:G.gold, padding:'7px 0', textAlign:'center'}}>
+            {viewYear} · {MONTH_NAMES[viewMonth]}
+          </button>
+        )}
+        <button onClick={nextMonth} style={{...S.gh, padding:'6px 12px', fontSize:14, flexShrink:0}}>›</button>
+        <button
+          onClick={() => { setViewYear(new Date().getFullYear()); setViewMonth(new Date().getMonth()); setNavEditing(false); }}
+          style={{...S.gh, padding:'5px 8px', fontSize:10, flexShrink:0, color:G.gold, borderColor:'rgba(212,168,83,.3)'}}>
+          ⌂
+        </button>
+      </div>
+
+      {/* Day headers */}
+      <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2, marginBottom:2}}>
+        {DAY_NAMES.map(d => (
+          <div key={d} style={{textAlign:'center', fontSize:10, color:G.dim, padding:'4px 0', ...CZ}}>{d}</div>
+        ))}
+      </div>
+
+      {/* Calendar grid */}
+      <div style={{display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:2}}>
+        {/* Empty cells before first day */}
+        {Array.from({length: firstDay}).map((_,i) => <div key={'e'+i}/>)}
+
+        {Array.from({length: daysInMonth}).map((_,i) => {
+          const day = i+1;
+          const ds  = dateStr(viewYear, viewMonth, day);
+          const dayPlans = plansForDate(ds);
+          const ev = eventsForDate(ds);
+          const hasData = ev.commutes.length||ev.entries.length||ev.exps.length;
+          const isToday = day===today.getDate()&&viewMonth===today.getMonth()&&viewYear===today.getFullYear();
+          const isSel   = ds === selDate;
+
+          return (
+            <div key={day} onClick={() => setSelDate(isSel ? null : ds)}
+              style={{
+                minHeight:44, borderRadius:3, padding:'3px 4px', cursor:'pointer', position:'relative',
+                background: isSel ? G.gold+'22' : isToday ? 'rgba(212,168,83,.08)' : G.bg3,
+                border:'1px solid '+(isSel?G.gold:isToday?G.gold+'44':G.br2),
+              }}>
+              <div style={{fontSize:12, color:isToday?G.gold:G.text, fontWeight:isToday?600:400, marginBottom:2}}>{day}</div>
+              {/* Plan color dots */}
+              <div style={{display:'flex', flexWrap:'wrap', gap:2}}>
+                {dayPlans.slice(0,3).map(p => (
+                  <div key={p.id} style={{width:6, height:6, borderRadius:'50%', background:p.color}}/>
+                ))}
+              </div>
+              {/* Data indicators */}
+              {hasData>0 && (
+                <div style={{position:'absolute', bottom:3, right:3, display:'flex', gap:2}}>
+                  {ev.entries.length>0&&<span style={{fontSize:8}}>📔</span>}
+                  {ev.exps.length>0&&<span style={{fontSize:8}}>💰</span>}
+                  {ev.commutes.length>0&&<span style={{fontSize:8}}>🚄</span>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Selected date detail */}
+      {selDate && (
+        <div style={{marginTop:14, borderTop:'1px solid '+G.br, paddingTop:14}}>
+          <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.gold, marginBottom:10}}>{selDate.replace(/-/g,'/')}</div>
+
+          {selPlans.length > 0 && selPlans.map(p => (
+            <div key={p.id} style={{display:'flex', alignItems:'center', gap:6, marginBottom:6}}>
+              <div style={{width:8, height:8, borderRadius:'50%', background:p.color}}/>
+              <span style={{fontSize:13, color:p.color}}>{p.name}</span>
+            </div>
+          ))}
+
+          {selEvents.entries.map(e => (
+            <div key={e.id} style={{...S.card, padding:'10px 12px', marginBottom:6}}>
+              <div style={{display:'flex', gap:6, alignItems:'center'}}>
+                <span style={{fontSize:13}}>📔</span>
+                <span style={{fontSize:14, fontWeight:500}}>{e.city}</span>
+                {'★'.repeat(e.rating) && <span style={{fontSize:11, color:G.gold}}>{'★'.repeat(e.rating)}</span>}
+              </div>
+              {e.comment && <div style={{fontSize:12, color:G.sub, fontStyle:'italic', marginTop:4}}>"{e.comment}"</div>}
+            </div>
+          ))}
+
+          {selEvents.exps.map(e => (
+            <div key={e.id} style={{...S.card, padding:'10px 12px', marginBottom:6, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+              <div style={{display:'flex', gap:6, alignItems:'center'}}>
+                <span style={{fontSize:13}}>💰</span>
+                <span style={{fontSize:14}}>{e.shop||e.category}</span>
+              </div>
+              <span style={{fontSize:15, color:G.gold}}>{e.currency&&e.currency.split(' ')[1]}{e.amount}</span>
+            </div>
+          ))}
+
+          {selEvents.commutes.map(c => (
+            <div key={c.id} style={{...S.card, padding:'10px 12px', marginBottom:6}}>
+              <div style={{display:'flex', gap:6, alignItems:'center'}}>
+                <span style={{fontSize:13}}>🚄</span>
+                <span style={{fontSize:14}}>{c.from} → {c.to}</span>
+              </div>
+              {c.estTime && <div style={{fontSize:12, color:G.dim, marginTop:3}}>{c.estTime}</div>}
+            </div>
+          ))}
+
+          {!selPlans.length && !selEvents.entries.length && !selEvents.exps.length && !selEvents.commutes.length && (
+            <div style={{textAlign:'center', fontSize:13, color:'#3a3020', fontStyle:'italic', padding:'12px 0'}}>{T.noRecords}</div>
+          )}
+        </div>
+      )}
+
+      {/* Plan Form Modal */}
+      <Modal show={showForm} onClose={() => {setShowForm(false);setEditId(null);}} title={editId ? T.edit : T.addPlan}>
+        <div style={{marginBottom:10}}><Lbl t={T.planName + ' *'}/><input style={S.inp} placeholder="Roma, 波蘭之旅..." value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}/></div>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:dateErr?6:10}}>
+          <div>
+            <Lbl t={T.planStart + ' *'}/>
+            <input type="date" style={{...S.inp, colorScheme:'dark'}} value={form.start}
+              onChange={e=>{setForm(p=>({...p,start:e.target.value})); if(form.end&&e.target.value>form.end) setDateErr(T.dateErrEnd||'結束日期不能早於開始日期'); else setDateErr('');}}/>
+          </div>
+          <div>
+            <Lbl t={T.planEnd}/>
+            <input type="date" style={{...S.inp, colorScheme:'dark'}} value={form.end}
+              onChange={e=>{setForm(p=>({...p,end:e.target.value})); if(e.target.value&&form.start&&e.target.value<form.start) setDateErr(T.dateErrEnd||'結束日期不能早於開始日期'); else setDateErr('');}}/>
+          </div>
+        </div>
+        {dateErr && <div style={{fontSize:12, color:'#c8948a', marginBottom:8}}>⚠ {dateErr}</div>}
+        <div style={{marginBottom:16}}>
+          <Lbl t={T.planColor}/>
+          <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+            {PLAN_COLORS.map(c => (
+              <button key={c} onClick={() => setForm(p=>({...p,color:c}))}
+                style={{width:28, height:28, borderRadius:'50%', background:c, border: form.color===c ? '3px solid #fff' : '3px solid transparent', cursor:'pointer', padding:0}}>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{display:'flex', gap:10}}>
+          <button style={{...S.gh, flex:1}} onClick={() => {setShowForm(false);setEditId(null);}}>{T.cancel}</button>
+          <button style={{...S.gold, flex:2, opacity:(!form.name||!form.start)?0.5:1}} onClick={submit}>{T.save}</button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════
+// MAIN APP
+// ══════════════════════════════════════════════
+function App() {
+  const [lang, setLang] = useStorage('lang', '繁中');
+  const T = TR[lang];
+  const [tab, setTab] = useState(0);
+  const [defCurr, setDefCurr] = useStorage('defCurr', 'CNY ¥');
+  const [tripName, setTripName] = useStorage('tripName', '');
+  const [plans, setPlans] = useStorage('plans', []);
+
+  // Transport
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [searched, setSearched] = useState(false);
+  const [commutes, setCommutes] = useStorage('commutes', []);
+  const [showST, setShowST] = useState(false);
+  const [editCId, setEditCId] = useState(null);
+  const [stF, setStF] = useState({date:'', estTime:'', cost:'', currency:'CNY ¥', note:''});
+
+  // Diary
+  const [entries, setEntries] = useStorage('entries', []);
+  const [showDF, setShowDF] = useState(false);
+  const [editDId, setEditDId] = useState(null);
+  const [dF, setDF] = useState({city:'', country:'', date:'', rating:5, comment:'', tags:''});
+  const [dPh, setDPh] = useState([]);
+
+  // Expenses
+  const [exps, setExps] = useStorage('exps', []);
+  const [showEF, setShowEF] = useState(false);
+  const [editEId, setEditEId] = useState(null);
+  const [eF, setEF] = useState({date:'', city:'', shop:'', category:'', amount:'', currency:'CNY ¥', note:''});
+  const [ePh, setEPh] = useState([]);
+
+  // Stats
+  const [sCurr, setSCurr] = useState(defCurr);
+  const [sView, setSView] = useState('monthly');
+  const [showCDD, setShowCDD] = useState(false);
+
+  useEffect(() => { setSCurr(defCurr); }, [defCurr]);
+
+  const sym = c => c.split(' ')[1] || '';
+  const cv = (e, fx) => {
+    const r = fx ? fx[e.currency] / fx[sCurr] : BASE_FX[e.currency] / BASE_FX[sCurr];
+    return (parseFloat(e.amount)||0) * r;
+  };
+  const total = exps.reduce((a,e) => a + cv(e, null), 0);
+  const byM = exps.reduce((a,e) => { const m=e.date&&e.date.slice(0,7).replace('-','/')||'?'; a[m]=(a[m]||0)+cv(e,null); return a; }, {});
+  const byC = exps.reduce((a,e) => { a[e.city]=(a[e.city]||0)+cv(e,null); return a; }, {});
+  // Country stats from diary entries
+  const thisYear = new Date().getFullYear().toString();
+  const yearEntries = entries.filter(e => e.date && e.date.startsWith(thisYear));
+  const allCountries = [...new Set(yearEntries.map(e => e.country).filter(Boolean))];
+  const byMCountry = yearEntries.reduce((a,e) => {
+    const m = e.date.slice(0,7).replace('-','/');
+    if (!a[m]) a[m] = new Set();
+    if (e.country) a[m].add(e.country);
+    return a;
+  }, {});
+  const mLCountry = Object.keys(byMCountry).sort();
+  const mL = Object.keys(byM).sort();
+  const cL = Object.keys(byC).sort((a,b)=>byC[b]-byC[a]);
+
+  const doSearch = () => {
+    if (!from.trim() || !to.trim()) return;
+    window.open('https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(from) + '&destination=' + encodeURIComponent(to) + '&travelmode=transit', '_blank');
+    setSearched(true);
+    setStF(f => ({...f, date:new Date().toISOString().slice(0,10)}));
+  };
+
+  const saveCommute = () => {
+    if (!stF.date) return;
+    if (editCId) {
+      setCommutes(cs => cs.map(c => c.id===editCId ? {...c, ...stF, cost:parseFloat(stF.cost)||0} : c));
+      setEditCId(null);
+    } else {
+      setCommutes(cs => [{id:Date.now(), ...stF, cost:parseFloat(stF.cost)||0}, ...cs]);
+    }
+    setShowST(false);
+    setStF({date:new Date().toISOString().slice(0,10), estTime:'', cost:'', currency:defCurr, note:'', from:'', to:''});
+  };
+
+  const openEditD = e => { setDF({city:e.city, country:e.country, date:e.date, rating:e.rating, comment:e.comment, tags:e.tags}); setDPh(e.photos||[]); setEditDId(e.id); setShowDF(true); };
+  const submitD = () => {
+    if (!dF.city || !dF.date) return;
+    if (editDId) setEntries(es => es.map(e => e.id===editDId ? {...e, ...dF, photos:dPh} : e));
+    else setEntries(es => [{id:Date.now(), ...dF, photos:dPh}, ...es]);
+    setDF({city:'', country:'', date:'', rating:5, comment:'', tags:''}); setDPh([]); setEditDId(null); setShowDF(false);
+  };
+
+  const openEditE = e => { setEF({date:e.date, city:e.city, shop:e.shop||'', category:e.category, amount:e.amount, currency:e.currency, note:e.note||''}); setEPh(e.photos||[]); setEditEId(e.id); setShowEF(true); };
+  const submitE = () => {
+    if (!eF.amount || !eF.date) return;
+    const item = {...eF, amount:parseFloat(eF.amount)||0, photos:ePh};
+    if (editEId) setExps(es => es.map(e => e.id===editEId ? {...e, ...item} : e));
+    else setExps(es => [{id:Date.now(), ...item}, ...es]);
+    setEF({date:'', city:'', shop:'', category:'', amount:'', currency:'CNY ¥', note:''}); setEPh([]); setEditEId(null); setShowEF(false);
+  };
+
+  const ICONS = ['📅','🚄','🗺','📔','💰','📊','⚙'];
+
+  return (
+    <div style={{fontFamily:"'Cormorant Garamond','Georgia',serif", background:G.bg, minHeight:'100vh', color:G.text, maxWidth:430, margin:'0 auto'}}>
+
+      {/* HEADER */}
+      <div style={{padding:'16px 20px 12px', borderBottom:'1px solid '+G.br}}>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+          <div>
+            <div style={{...CZ, fontSize:11, letterSpacing:4, color:G.dim}}>VIAGGIO · 行</div>
+            <div style={{fontSize:20, fontWeight:300, fontStyle:'italic', letterSpacing:2, marginTop:2}}>
+              {tripName || '旅途攻略'}
+            </div>
+          </div>
+          <div style={{display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6}}>
+            <div style={{display:'flex', gap:3}}>
+              {['繁中','简中','EN','IT'].map(l => (
+                <button key={l} onClick={() => setLang(l)} style={l===lang ? {...S.gold, padding:'5px 9px', fontSize:11} : {...S.gh, padding:'4px 8px', fontSize:9}}>{l}</button>
+              ))}
+            </div>
+            <button style={{...S.out, fontSize:11, padding:'5px 11px'}} onClick={() => csvDl(exps.map(e=>({Date:e.date,City:e.city,Shop:e.shop,Cat:e.category,Amt:e.amount,Cur:e.currency,Note:e.note})), 'expenses.csv')}>↓ CSV</button>
+          </div>
+        </div>
+      </div>
+
+      {/* TAB BAR */}
+      <div style={{display:'flex', borderBottom:'1px solid '+G.br, background:G.bg, position:'sticky', top:0, zIndex:10}}>
+        {ICONS.map((ic,i) => (
+          <button key={i} onClick={() => setTab(i)} style={{flex:1, background:'transparent', border:'none', cursor:'pointer', padding:'7px 0', ...CZ, fontSize:11, letterSpacing:0, color:tab===i?G.gold:G.dim, position:'relative'}}>
+            <span style={{fontSize:16, display:'block', marginBottom:2}}>{ic}</span>
+            {T.tabs[i]}
+            {tab===i && <span style={{position:'absolute', bottom:0, left:'15%', right:'15%', height:1, background:G.gold, display:'block'}}/>}
+          </button>
+        ))}
+      </div>
+
+      <div style={{overflowY:'auto', height:'calc(100vh - 132px)', paddingBottom:24}}>
+
+        {tab===0 && <CalendarTab T={T} plans={plans} setPlans={setPlans} commutes={commutes} entries={entries} exps={exps}/>}
+        {localStorage.getItem('vg_photoWarn') === '1' && (
+          <div style={{background:'rgba(155,106,106,.12)', border:'1px solid rgba(155,106,106,.3)', padding:'8px 14px', fontSize:13, color:'#c8948a', lineHeight:1.6, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+            <span>{T.photoWarn}</span>
+            <button onClick={() => { localStorage.removeItem('vg_photoWarn'); window.location.reload(); }} style={{background:'none', border:'none', color:'#c8948a', cursor:'pointer', fontSize:14}}>✕</button>
+          </div>
+        )}
+
+        {/* TRANSPORT */}
+        {tab===1 && (
+          <div style={{padding:18}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
+              <div style={{fontSize:17, fontStyle:'italic'}}>{T.tripLog}</div>
+              <button style={{...S.gold, fontSize:11, padding:'7px 14px'}} onClick={() => {
+                setStF({date:new Date().toISOString().slice(0,10), estTime:'', cost:'', currency:defCurr, note:'', from:'', to:''});
+                setEditCId(null); setShowST(true);
+              }}>{T.addTrip}</button>
+            </div>
+            {/* Google Maps planner */}
+            <div style={{...S.card, marginBottom:14}}>
+              <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim, marginBottom:10}}>🗺 GOOGLE MAPS</div>
+              <div style={{marginBottom:8}}><Lbl t={T.from}/><input style={S.inp} placeholder="Beijing, 北京..." value={from} onChange={e=>setFrom(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}/></div>
+              <div style={{display:'flex', alignItems:'center', margin:'6px 0'}}>
+                <div style={{flex:1, height:1, background:G.br}}/><div style={{margin:'0 12px', color:G.gold, fontSize:16}}>↕</div><div style={{flex:1, height:1, background:G.br}}/>
+              </div>
+              <div style={{marginBottom:10}}><Lbl t={T.to}/><input style={S.inp} placeholder="Shanghai, Roma..." value={to} onChange={e=>setTo(e.target.value)} onKeyDown={e=>e.key==='Enter'&&doSearch()}/></div>
+              <button style={{...S.gold, width:'100%', fontSize:11, padding:10, letterSpacing:2}} onClick={doSearch}>🗺 {T.openMaps}</button>
+            </div>
+
+            {commutes.length > 0 && (
+              <div style={{marginTop:20}}>
+                <SecHead t={T.tripLog}/>
+                {commutes.map(c => (
+                  <div key={c.id} style={{...S.card, display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:15, fontWeight:500, marginBottom:3}}>{c.from} → {c.to}</div>
+                      <div style={{fontSize:12, color:G.dim, marginBottom:4}}>{c.date&&c.date.replace(/-/g,'/')}</div>
+                      <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
+                        {c.estTime && <div><span style={{fontSize:11, color:G.dim}}>{T.estTime} </span><span style={{fontSize:12}}>{c.estTime}</span></div>}
+                        {c.cost>0 && <div><span style={{fontSize:11, color:G.dim}}>{T.cost} </span><span style={{fontSize:12, color:G.gold}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
+                      </div>
+                      {c.note && <div style={{fontSize:11, color:G.sub, fontStyle:'italic', marginTop:3}}>{c.note}</div>}
+                    </div>
+                    <div style={{display:'flex', gap:5, marginLeft:8, flexShrink:0}}>
+                      <button onClick={() => { setStF({date:c.date, from:c.from||'', to:c.to||'', estTime:c.estTime||'', cost:c.cost||'', currency:c.currency||defCurr, note:c.note||''}); setEditCId(c.id); setShowST(true); }} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                      <button onClick={() => setCommutes(cs => cs.filter(x => x.id!==c.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* GUIDE */}
+        {tab===2 && <GuideTab T={T}/>}
+
+        {/* DIARY */}
+        {tab===3 && (
+          <div style={{padding:18}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
+              <div style={{fontSize:17, fontStyle:'italic'}}>{T.diaryTitle}</div>
+              <div style={{display:'flex', gap:8}}>
+                <button style={{...S.gh, fontSize:11}} onClick={() => csvDl(entries.map(e=>({City:e.city,Country:e.country,Date:e.date,Rating:e.rating,Comment:e.comment,Tags:e.tags})), 'diary.csv')}>↓ CSV</button>
+                <button style={S.gold} onClick={() => { setDF({city:'', country:'', date:'', rating:5, comment:'', tags:''}); setDPh([]); setEditDId(null); setShowDF(true); }}>{T.addDiary}</button>
+              </div>
+            </div>
+            {entries.map(e => (
+              <div key={e.id} style={S.card}>
+                {e.photos && e.photos.length > 0 && (
+                  <div style={{marginBottom:10}}>
+                    {e.photos.length===1
+                      ? <img src={e.photos[0].url} alt="" style={{width:'100%', maxHeight:220, objectFit:'cover', borderRadius:3, border:'1px solid '+G.br2, display:'block'}}/>
+                      : <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:4}}>{e.photos.map((ph,j) => <img key={j} src={ph.url} alt="" style={{width:'100%', height:100, objectFit:'cover', borderRadius:2, border:'1px solid '+G.br2}}/>)}</div>
+                    }
+                  </div>
+                )}
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:6}}>
+                  <div>
+                    <div style={{fontSize:16, fontWeight:500}}>{e.city}</div>
+                    <div style={{fontSize:12, color:G.dim}}>{e.country} · {e.date&&e.date.replace(/-/g,'/')}</div>
+                  </div>
+                  <div style={{display:'flex', gap:5, alignItems:'center'}}>
+                    <Stars v={e.rating}/>
+                    <button onClick={() => openEditD(e)} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                    <button onClick={() => setEntries(es => es.filter(x => x.id!==e.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
+                  </div>
+                </div>
+                {e.comment && <div style={{fontSize:13, color:G.sub, lineHeight:1.7, fontStyle:'italic', marginBottom:8}}>"{e.comment}"</div>}
+                {e.tags && <div style={{display:'flex', gap:5, flexWrap:'wrap'}}>{e.tags.split(',').filter(Boolean).map((tg,j) => <span key={j} style={{fontSize:12, padding:'4px 8px', borderRadius:2, background:'rgba(212,168,83,.08)', color:G.gold, border:'1px solid rgba(212,168,83,.2)'}}>{tg.trim()}</span>)}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* EXPENSES */}
+        {tab===4 && (
+          <div style={{padding:18}}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14}}>
+              <div style={{fontSize:17, fontStyle:'italic'}}>{T.expTitle}</div>
+              <div style={{display:'flex', gap:8}}>
+                <button style={{...S.gh, fontSize:11}} onClick={() => csvDl(exps.map(e=>({Date:e.date,City:e.city,Shop:e.shop,Cat:e.category,Amt:e.amount,Cur:e.currency,Note:e.note})), 'expenses.csv')}>↓ CSV</button>
+                <button style={S.gold} onClick={() => { setEF({date:'', city:'', shop:'', category:'', amount:'', currency:defCurr, note:''}); setEPh([]); setEditEId(null); setShowEF(true); }}>{T.addExp}</button>
+              </div>
+            </div>
+            {exps.map(e => (
+              <div key={e.id} style={S.card}>
+                {e.photos && e.photos.length > 0 && (
+                  <div style={{display:'flex', gap:4, flexWrap:'wrap', marginBottom:8}}>
+                    {e.photos.map((ph,j) => <img key={j} src={ph.url} alt="" style={{width:60, height:60, objectFit:'cover', borderRadius:2, border:'1px solid '+G.br2}}/>)}
+                  </div>
+                )}
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+                  <div style={{flex:1}}>
+                    <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4, flexWrap:'wrap'}}>
+                      {e.category && <span style={{fontSize:12, padding:'3px 8px', borderRadius:2, background:(EXP_CLR[e.category]||G.dim)+'20', color:EXP_CLR[e.category]||G.sub, border:'1px solid '+(EXP_CLR[e.category]||G.br)+'33'}}>{T.expCatLabels ? T.expCatLabels[EXP_CATS.indexOf(e.category)] : e.category}</span>}
+                      {e.shop && <span style={{fontSize:14, fontWeight:500}}>{e.shop}</span>}
+                    </div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:3}}>{e.city} · {e.date&&e.date.replace(/-/g,'/')}</div>
+                    {e.note && <div style={{fontSize:12, color:G.sub, fontStyle:'italic'}}>{e.note}</div>}
+                  </div>
+                  <div style={{textAlign:'right', marginLeft:12}}>
+                    <div style={{fontSize:20, fontWeight:300, color:G.gold}}>{e.currency&&e.currency.split(' ')[1]}{e.amount}</div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:4}}>{e.currency&&e.currency.split(' ')[0]}</div>
+                    <div style={{display:'flex', gap:4}}>
+                      <button onClick={() => openEditE(e)} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                      <button onClick={() => setExps(es => es.filter(x => x.id!==e.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* STATS */}
+        {tab===5 && (
+          <div style={{padding:18}}>
+            <div style={{background:G.bg4, border:'1px solid '+G.br, borderRadius:6, padding:14, marginBottom:14}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10}}>
+                <div style={{...CZ, fontSize:11, letterSpacing:2, color:G.dim}}>{T.yearTotal}</div>
+                <div style={{position:'relative'}}>
+                  <button onClick={() => setShowCDD(v=>!v)} style={{...S.gh, fontSize:12, padding:'6px 10px', display:'flex', alignItems:'center', gap:4}}>
+                    {sCurr}<span style={{color:G.gold}}>▾</span>
+                  </button>
+                  {showCDD && (
+                    <div style={{position:'absolute', right:0, top:'100%', background:G.bg2, border:'1px solid '+G.br, borderRadius:2, zIndex:50, minWidth:110}}>
+                      {CURR.map(c => (
+                        <div key={c} style={{padding:'7px 12px', cursor:'pointer', fontSize:13, color:c===sCurr?G.gold:G.sub}} onMouseEnter={e=>e.currentTarget.style.background=G.bg3} onMouseLeave={e=>e.currentTarget.style.background='transparent'} onClick={() => {setSCurr(c); setShowCDD(false);}}>
+                          {c}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{fontSize:36, fontWeight:300}}>
+                <span style={{fontSize:22, color:G.gold}}>{sym(sCurr)}</span>{total.toFixed(0)}
+                <span style={{fontSize:12, color:G.dim, marginLeft:8}}>{sCurr.split(' ')[0]}</span>
+              </div>
+            </div>
+
+            <div style={{display:'flex', gap:5, marginBottom:16, flexWrap:'wrap'}}>
+              {[['monthly',T.monthly],['city',T.byCity],['countries',T.countries],['fx',T.fx],['commute',T.commute]].map(([v,l]) => (
+                <button key={v} style={chip(sView===v)} onClick={() => setSView(v)}>{l}</button>
+              ))}
+            </div>
+
+            {sView==='monthly' && (
+              <div>
+                <SecHead t={T.monthly}/>
+                <Bar labels={mL} vals={mL.map(m=>byM[m])} clr={G.gold} unit={sym(sCurr)} noData={T.noData}/>
+                <div style={{marginTop:12}}>{mL.map(m => (
+                  <div key={m} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid '+G.br2, fontSize:13}}>
+                    <span style={{color:G.sub}}>{m}</span><span style={{color:G.gold}}>{sym(sCurr)}{byM[m].toFixed(0)}</span>
+                  </div>
+                ))}</div>
+              </div>
+            )}
+            {sView==='city' && (
+              <div>
+                <SecHead t={T.byCity}/>
+                <Bar labels={cL} vals={cL.map(c=>byC[c])} clr={G.green} unit={sym(sCurr)} noData={T.noData}/>
+                <div style={{marginTop:12}}>{cL.map(c => (
+                  <div key={c} style={{display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid '+G.br2, fontSize:13}}>
+                    <span style={{color:G.sub}}>{c}</span><span style={{color:G.green}}>{sym(sCurr)}{byC[c].toFixed(0)}</span>
+                  </div>
+                ))}</div>
+              </div>
+            )}
+            {sView==='countries' && (
+              <div>
+                <SecHead t={T.countries}/>
+                {/* Hero number */}
+                <div style={{background:G.bg4, border:'1px solid '+G.br, borderRadius:6, padding:'16px 18px', marginBottom:14, display:'flex', alignItems:'center', gap:16}}>
+                  <div style={{fontSize:48, fontWeight:300, color:G.gold, lineHeight:1}}>{allCountries.length}</div>
+                  <div>
+                    <div style={{...CZ, fontSize:10, letterSpacing:2, color:G.dim}}>{T.countriesTotal}</div>
+                    {T.countriesUnit && <div style={{fontSize:12, color:G.sub, marginTop:2}}>{T.countriesUnit}</div>}
+                  </div>
+                </div>
+                {/* Country flags/list */}
+                {allCountries.length > 0 && (
+                  <div style={{marginBottom:14}}>
+                    <SecHead t={T.countriesList}/>
+                    <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+                      {allCountries.map(c => (
+                        <span key={c} style={{fontSize:12, padding:'5px 12px', borderRadius:3, background:'rgba(122,155,106,.12)', color:G.green, border:'1px solid rgba(122,155,106,.25)'}}>{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {/* Monthly breakdown */}
+                <SecHead t={T.monthlyCountries}/>
+                <Bar labels={mLCountry} vals={mLCountry.map(m=>byMCountry[m].size)} clr={'#7a9b6a'} noData={T.noData}/>
+                <div style={{marginTop:12}}>{mLCountry.map(m => (
+                  <div key={m} style={{padding:'8px 0', borderBottom:'1px solid '+G.br2}}>
+                    <div style={{display:'flex', justifyContent:'space-between', fontSize:13, marginBottom:4}}>
+                      <span style={{color:G.sub}}>{m}</span>
+                      <span style={{color:G.green}}>{byMCountry[m].size} {T.countriesUnit||T.countries}</span>
+                    </div>
+                    <div style={{display:'flex', flexWrap:'wrap', gap:4}}>
+                      {[...byMCountry[m]].map(c => (
+                        <span key={c} style={{fontSize:11, padding:'2px 7px', borderRadius:2, background:'rgba(122,155,106,.1)', color:G.green}}>{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}</div>
+                {allCountries.length===0 && <div style={{textAlign:'center', padding:'24px 0', color:'#3a3020', fontStyle:'italic', fontSize:13}}>{T.noData}</div>}
+              </div>
+            )}
+            {sView==='fx' && <FXPanel T={T}/>}
+            {sView==='commute' && (
+              <div>
+                <SecHead t={T.commute}/>
+                {commutes.length===0 && <div style={{textAlign:'center', padding:'28px 0', color:'#3a3020', fontStyle:'italic', fontSize:13}}>{T.noRecords}</div>}
+                {commutes.map(c => (
+                  <div key={c.id} style={S.card}>
+                    <div style={{fontSize:15, fontWeight:500, marginBottom:3}}>{c.from} → {c.to}</div>
+                    <div style={{fontSize:12, color:G.dim, marginBottom:5}}>{c.date&&c.date.replace(/-/g,'/')}</div>
+                    <div style={{display:'flex', gap:14, flexWrap:'wrap'}}>
+                      {c.estTime && <div><span style={{fontSize:11, color:G.dim}}>{T.estTime} </span><span style={{fontSize:13, color:G.gold}}>{c.estTime}</span></div>}
+                      {c.cost>0 && <div><span style={{fontSize:11, color:G.dim}}>{T.cost} </span><span style={{fontSize:13, color:G.green}}>{c.currency&&c.currency.split(' ')[1]}{c.cost}</span></div>}
+                    </div>
+                    {c.note && <div style={{fontSize:11, color:G.sub, fontStyle:'italic', marginTop:4}}>{c.note}</div>}
+                    <div style={{display:'flex', gap:6, marginTop:8}}>
+                      <button onClick={() => {
+                        setStF({date:c.date, from:c.from||'', to:c.to||'', estTime:c.estTime||'', cost:c.cost||'', currency:c.currency||defCurr, note:c.note||''});
+                        setEditCId(c.id);
+                        setShowST(true);
+                        setTab(1);
+                      }} style={{...S.gh, padding:'5px 9px', fontSize:11}}>{T.edit}</button>
+                      <button onClick={() => setCommutes(cs => cs.filter(x => x.id!==c.id))} style={{...S.rd, padding:'5px 9px', fontSize:11}}>{T.del}</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SETTINGS */}
+        {tab===6 && <SettingsTab T={T} lang={lang} setLang={setLang} defCurr={defCurr} setDefCurr={setDefCurr} tripName={tripName} setTripName={setTripName}/>}
+
+      </div>
+
+      {/* MODALS */}
+      <Modal show={showST} onClose={() => setShowST(false)} title={editCId ? T.editTrip : T.saveLog}>
+        <div style={{display:'grid', gridTemplateColumns:'1fr auto 1fr', gap:6, alignItems:'flex-end', marginBottom:10}}>
+          <div><Lbl t={T.tripFrom}/><input style={S.inp} placeholder="北京, Roma..." value={stF.from||''} onChange={e=>setStF(f=>({...f,from:e.target.value}))}/></div>
+          <div style={{color:G.gold, fontSize:16, marginBottom:10, textAlign:'center'}}>→</div>
+          <div><Lbl t={T.tripTo}/><input style={S.inp} placeholder="上海, Paris..." value={stF.to||''} onChange={e=>setStF(f=>({...f,to:e.target.value}))}/></div>
+        </div>
+        <div style={{marginBottom:10}}><Lbl t={T.date + ' *'}/><input type="date" style={{...S.inp, colorScheme:'dark'}} value={stF.date} onChange={e=>setStF(f=>({...f,date:e.target.value}))}/></div>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
+          <div><Lbl t={T.estTime}/><input style={S.inp} placeholder={T.estTimePH} value={stF.estTime||''} onChange={e=>setStF(f=>({...f,estTime:e.target.value}))}/></div>
+          <div><Lbl t={T.cost}/><input style={S.inp} type="number" placeholder="0" value={stF.cost} onChange={e=>setStF(f=>({...f,cost:e.target.value}))}/></div>
+        </div>
+        <div style={{marginBottom:10}}><Lbl t={T.currency2}/><select style={{...S.inp, appearance:'none'}} value={stF.currency} onChange={e=>setStF(f=>({...f,currency:e.target.value}))}>{CURR.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+        <div style={{marginBottom:10}}><Lbl t={T.note}/><input style={S.inp} placeholder={T.notePlaceholder} value={stF.note} onChange={e=>setStF(f=>({...f,note:e.target.value}))}/></div>
+        {stF.from && stF.to && (
+          <button style={{...S.gh, width:'100%', fontSize:11, marginBottom:10}} onClick={() => window.open('https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(stF.from)+'&destination='+encodeURIComponent(stF.to)+'&travelmode=transit','_blank')}>
+            🗺 {T.openMaps}
+          </button>
+        )}
+        <div style={{display:'flex', gap:10}}>
+          <button style={{...S.gh, flex:1}} onClick={() => setShowST(false)}>{T.cancel}</button>
+          <button style={{...S.gold, flex:2}} onClick={saveCommute}>{T.save}</button>
+        </div>
+      </Modal>
+
+      <Modal show={showDF} onClose={() => {setShowDF(false); setEditDId(null);}} title={editDId ? T.edit+' 日記' : T.addDiary}>
+        <Photos photos={dPh} set={setDPh} T={T}/>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
+          <div><Lbl t={T.city + ' *'}/><input style={{...S.inp, borderColor: dF.city?G.br:'rgba(212,168,83,.4)'}} placeholder="北京, Roma..." value={dF.city} onChange={e=>setDF(p=>({...p,city:e.target.value}))}/></div>
+          <div><Lbl t={T.country}/><input style={S.inp} placeholder="中国, Italia..." value={dF.country} onChange={e=>setDF(p=>({...p,country:e.target.value}))}/></div>
+        </div>
+        {editCId && (
+          <div style={{marginBottom:12, fontSize:13, color:G.sub}}>
+            {commutes.find(c=>c.id===editCId)?.from} → {commutes.find(c=>c.id===editCId)?.to}
+          </div>
+        )}
+        <div style={{marginBottom:10}}><Lbl t={T.date + ' *'}/><DateInput style={{...S.inp, borderColor: dF.date?G.br:'rgba(212,168,83,.4)'}} value={dF.date} onChange={e=>setDF(p=>({...p,date:e.target.value}))} required={true}/></div>
+        <div style={{marginBottom:10}}><Lbl t={T.rating}/><Stars v={dF.rating} on={v=>setDF(p=>({...p,rating:v}))} labels={T.starLabels}/></div>
+        <div style={{marginBottom:10}}><Lbl t={T.comment}/><textarea style={{...S.ta, minHeight:80}} value={dF.comment} onChange={e=>setDF(p=>({...p,comment:e.target.value}))} placeholder="你的旅行心得..."/></div>
+        <div style={{marginBottom:14}}><Lbl t={T.tags}/><input style={S.inp} value={dF.tags} onChange={e=>setDF(p=>({...p,tags:e.target.value}))} placeholder="美食,打卡,必去"/></div>
+        <div style={{display:'flex', gap:10}}>
+          <button style={{...S.gh, flex:1}} onClick={() => {setShowDF(false); setEditDId(null);}}>{T.cancel}</button>
+          <button style={{...S.gold, flex:2, opacity:(!dF.city||!dF.date)?0.5:1}} onClick={submitD}>{T.save}</button>
+        </div>
+      </Modal>
+
+      <Modal show={showEF} onClose={() => {setShowEF(false); setEditEId(null);}} title={editEId ? T.edit+' 花費' : T.addExp}>
+        <Photos photos={ePh} set={setEPh} T={T}/>
+        <div style={{marginBottom:10}}><Lbl t={T.date}/><DateInput style={S.inp} value={eF.date} onChange={e=>setEF(p=>({...p,date:e.target.value}))}/></div>
+        <div style={{marginBottom:10}}><Lbl t={T.city}/><input style={S.inp} placeholder="Roma, 北京..." value={eF.city} onChange={e=>setEF(p=>({...p,city:e.target.value}))}/></div>
+        <div style={{marginBottom:10}}><Lbl t={T.shop}/><input style={S.inp} placeholder="餐廳名、景點、飯店..." value={eF.shop} onChange={e=>setEF(p=>({...p,shop:e.target.value}))}/></div>
+        <div style={{marginBottom:10}}>
+          <Lbl t={T.category}/>
+          <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+            {EXP_CATS.map((c,i) => <button key={c} onClick={() => setEF(p=>({...p,category:c}))} style={chip(eF.category===c, EXP_CLR[c])}>{T.expCatLabels ? T.expCatLabels[i] : c}</button>)}
+          </div>
+        </div>
+        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:10}}>
+          <div><Lbl t={T.amount}/><input style={S.inp} type="number" placeholder="0.00" value={eF.amount} onChange={e=>setEF(p=>({...p,amount:e.target.value}))}/></div>
+          <div><Lbl t={T.currency2}/><select style={{...S.inp, appearance:'none'}} value={eF.currency} onChange={e=>setEF(p=>({...p,currency:e.target.value}))}>{CURR.map(c=><option key={c} value={c}>{c}</option>)}</select></div>
+        </div>
+        <div style={{marginBottom:14}}><Lbl t={T.note}/><input style={S.inp} placeholder="備注（選填）" value={eF.note} onChange={e=>setEF(p=>({...p,note:e.target.value}))}/></div>
+        <div style={{display:'flex', gap:10}}>
+          <button style={{...S.gh, flex:1}} onClick={() => {setShowEF(false); setEditEId(null);}}>{T.cancel}</button>
+          <button style={{...S.gold, flex:2}} onClick={submitE}>{T.save}</button>
+        </div>
+      </Modal>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+
+</script>
+</body>
+</html>
